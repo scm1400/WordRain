@@ -1,0 +1,194 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8"/>
+    <style type="text/css">
+
+        @font-face {
+            font-family: 'Pretendard-Regular';
+            src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff') format('woff');
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        * {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard-Regular';
+            /* font-family: Arial, Helvetica, sans-serif; */
+
+        }
+
+        .widget {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 0px;
+            position: absolute;
+            width: max-content;
+            max-height: 258px;
+            /* min-width: 180px; */
+            filter: drop-shadow(0px 4px 20px rgba(0, 0, 0, 0.25));
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.54);
+            color: white;
+            font-size: 12px;
+            padding: 0px 8px;
+        }
+
+        .widget-nav {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 12px 10px;
+            width: 90%;
+            font-size: 13px;
+            font-weight: 600;
+            gap: 8px;
+        }
+
+        .widget-nav .title {
+            width: max-content;
+        }
+
+        .widget-nav img {
+            Width: 15px;
+            Height: 1.67px;
+        }
+
+        .widget-content {
+            height: max-content;
+            margin: 0 auto;
+            overflow: auto;
+        }
+
+        .players {
+            padding: 0px 0px 8px;
+            width: 160px;
+        }
+
+        .player-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+        }
+
+        .player {
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 3px;
+        }
+
+        .rank-num {
+            width: max-content;
+            flex-shrink: 0;
+            min-width: 20px;
+            min-height: 20px;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            background: white;
+            color: black;
+            border-radius: 4px;
+            margin-right: 6px;
+        }
+
+        .player-score {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            /* height: 18px; */
+            width: max-content;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 12px;
+            /* line-height: 140%; */
+            flex-shrink: 0;
+        }
+
+        .true {
+            background: rgba(5, 184, 162, 0.8);
+        }
+
+        .false {
+            background: rgba(255, 255, 255, 0.8);
+            color: #FF5353;
+        }
+
+        ::-webkit-scrollbar {
+            width: 1px;
+        }
+
+    </style>
+</head>
+<body>
+<div class="widget">
+    <div class="widget-nav">
+        <span class="title">🏆 순위</span>
+        <span class="player-count"></span>
+    </div>
+    <div class="widget-content">
+        <div class="players"></div>
+    </div>
+</div>
+<script type="text/javascript">
+
+    let list = {};
+
+    let str_survive = '';
+    let str_fail = '';
+
+    function renderRank(rankArray) {
+        document.querySelector(".player-count").innerText = `(${rankArray.length}명 참가중)`;
+        for (let i = 0; i < rankArray.length; i++) {
+            const data = rankArray[i];
+            const rankNum = i + 1;
+            const playerDiv = document.createElement('div');
+            playerDiv.setAttribute('class', 'player');
+
+            const rankNumDiv = document.createElement('span');
+            rankNumDiv.classList.add("rank-num");
+            rankNumDiv.innerText = rankNum.toString();
+            if (rankNum == 1) {
+                rankNumDiv.style.backgroundColor = 'gold';
+            } else if (rankNum == 2) {
+                rankNumDiv.style.backgroundColor = 'silver';
+            } else if (rankNum == 3) {
+                rankNumDiv.style.backgroundColor = 'rosybrown';
+            }
+            playerDiv.append(rankNumDiv)
+
+            const playerNameDiv = document.createElement('div');
+            playerNameDiv.setAttribute('class', 'player-name');
+            playerNameDiv.textContent = data.name;
+            playerDiv.append(playerNameDiv);
+
+            const scoreDiv = document.createElement('div');
+            scoreDiv.setAttribute('class', `player-score true`);
+
+            scoreDiv.textContent = `${data.score}점`;
+            playerDiv.append(scoreDiv);
+            document.querySelector('.players').append(playerDiv);
+        }
+    }
+
+    window.addEventListener('message', (e) => {
+        const type = e.data.type;
+        if (type == "init") {
+            if (e.data.rankArray.length > 0) {
+                renderRank(e.data.rankArray);
+            }
+        } else if (type == "update") {
+            document.querySelector('.players').innerHTML = '';
+            renderRank(e.data.rankArray);
+        }
+    })
+</script>
+</body>
+</html>
+

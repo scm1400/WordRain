@@ -3,7 +3,7 @@
  */
 
 import "zep-script";
-import {ScriptDynamicResource} from "zep-script";
+import {ScriptDynamicResource, ScriptPlayer} from "zep-script";
 
 const [_mapWidth, _mapHeight] = [ScriptMap.width, ScriptMap.height];
 //@ts-ignore
@@ -21,6 +21,20 @@ WORD_CSV.trim().split(/\r?\n/).forEach((word: string) => {
 })
 
 
+class PlayerScoreData {
+    name: string;
+    score: number;
+
+    constructor(player: ScriptPlayer) {
+        this.name = player.name;
+        this.score = player.tag.score;
+    }
+
+    updateScore(score: number) {
+        this.score = score;
+    }
+}
+
 class Game {
     private _start: boolean;
     private _genTime: number;
@@ -28,6 +42,10 @@ class Game {
     private _level: number;
     private _levelTimer: number;
     private _levelAddTimer: number;
+    private _playerScoreMap: {
+        [id: string]: PlayerScoreData
+    };
+    _sortedRankings: PlayerScoreData[];
     wordObjectCounter: number;
 
     private wordStacker: {
@@ -46,16 +64,27 @@ class Game {
         this._levelTimer = 15;
         this._levelAddTimer = 0;
         this.wordObjectCounter = 0;
+        this._playerScoreMap = {};
+        this._sortedRankings = [];
 
-        for (let word in this.wordStacker) {
-            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
-        }
+        this.clearAllObjects();
         this.wordStacker = {};
+    }
+
+    start() {
+        this._start = true;
+        for (const player of ScriptApp.players) {
+            showRankWidget(player)
+        }
+    }
+
+    isStarted(): boolean {
+        return this._start;
     }
 
     restart() {
         this.init();
-        // 다른 필요한 초기화 로직 추가
+        this.start();
     }
 
     addWordObject(text: string, wordObject: WordObject) {
@@ -63,6 +92,12 @@ class Game {
             this.wordStacker[text] = [];
         }
         this.wordStacker[text].push(wordObject);
+    }
+
+    clearAllObjects() {
+        for (let word in this.wordStacker) {
+            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
+        }
     }
 
     getWordObjects(text: string): WordObject[] {
@@ -73,14 +108,6 @@ class Game {
         return this.wordStacker[text];
     }
 
-    start() {
-        ScriptApp.sayToAll("시작");
-        this._start = true;
-    }
-
-    isStarted(): boolean {
-        return this._start;
-    }
 
     generateWordObjectKey(text: string): string {
         return `${text}_${this.wordObjectCounter++}`;
@@ -92,6 +119,42 @@ class Game {
             const index = wordArray.indexOf(wordObject);
             if (index > -1) {
                 wordArray.splice(index, 1);
+            }
+        }
+    }
+
+    updateScore(player: ScriptPlayer) {
+        if (this._playerScoreMap.hasOwnProperty(player.id)) {
+            this._playerScoreMap[player.id].updateScore(player.tag.score);
+        } else {
+            this._playerScoreMap[player.id] = new PlayerScoreData(player);
+        }
+        this.updateRankings();
+    }
+
+    updateRankings() {
+        this._sortedRankings = Object.values(this._playerScoreMap).sort((a, b) => b.score - a.score);
+        this._sortedRankings = this._sortedRankings.slice(0, 50);
+
+        for (const player of ScriptApp.players) {
+            if (player.tag.rankWidget) {
+                player.tag.rankWidget.sendMessage({
+                    type: "update",
+                    rankArray: this._sortedRankings
+                })
+            }
+        }
+    }
+
+    getTop50Rankings(): PlayerScoreData[] {
+        return this._sortedRankings;
+    }
+
+    destroy() {
+        for (const player of ScriptApp.players) {
+            if (player.tag.rankWidget) {
+                player.tag.rankWidget.destroy();
+                player.tag.rankWidget = null;
             }
         }
     }
@@ -183,6 +246,9 @@ ScriptApp.onStart.Add(() => {
 
 ScriptApp.onJoinPlayer.Add(function (player) {
     player.tag = {};
+    if (_game.isStarted()) {
+        showRankWidget(player);
+    }
 })
 
 ScriptApp.addOnKeyDown(81, function (player) {
@@ -211,4 +277,18 @@ function incrementScore(player) {
     player.tag.score = (player.tag.score || 0) + 1;
     player.title = `[ 점수: ${player.tag.score}점 ]`;
     player.sendUpdated();
+    _game.updateScore(player);
+}
+
+function showRankWidget(player) {
+    if (player.isMobile) return;
+    if (player.tag.rankWidget) {
+        player.tag.rankWidget.destroy();
+        player.tag.rankWidget = null;
+    }
+    player.tag.rankWidget = player.showWidget("rankingBoard.html", "middleleft", 200, 400);
+    player.tag.rankWidget.sendMessage({
+        type: "init",
+        rankArray: _game._sortedRankings
+    })
 }
