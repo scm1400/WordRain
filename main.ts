@@ -12,7 +12,6 @@ const WORD_DB: {
     [text: string]: {
         sprite: ScriptDynamicResource,
     }
-
 } = {};
 
 WORD_CSV.trim().split(/\r?\n/).forEach((word: string) => {
@@ -21,18 +20,123 @@ WORD_CSV.trim().split(/\r?\n/).forEach((word: string) => {
     }
 })
 
-const WordStacker: {
-    [text: string]: WordObject[];
-} = {}
 
-let wordObjectCounter = 0; 
+class Game {
+    private _start: boolean;
+    private _genTime: number;
+    private _flushTime: number;
+    private _level: number;
+    private _levelTimer: number;
+    private _levelAddTimer: number;
+    wordObjectCounter: number;
+
+    private wordStacker: {
+        [text: string]: WordObject[];
+    };
+
+    constructor() {
+        this.init();
+    }
+
+    init() {
+        this._start = false;
+        this._genTime = 0;
+        this._flushTime = 0;
+        this._level = 1;
+        this._levelTimer = 15;
+        this._levelAddTimer = 0;
+        this.wordObjectCounter = 0;
+
+        for (let word in this.wordStacker) {
+            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
+        }
+        this.wordStacker = {};
+    }
+
+    restart() {
+        this.init();
+        // 다른 필요한 초기화 로직 추가
+    }
+
+    addWordObject(text: string, wordObject: WordObject) {
+        if (!this.wordStacker[text]) {
+            this.wordStacker[text] = [];
+        }
+        this.wordStacker[text].push(wordObject);
+    }
+
+    getWordObjects(text: string): WordObject[] {
+        return this.wordStacker[text] || [];
+    }
+
+    getWordObjectsForText(text: string): WordObject[] | undefined {
+        return this.wordStacker[text];
+    }
+
+    start() {
+        ScriptApp.sayToAll("시작");
+        this._start = true;
+    }
+
+    isStarted(): boolean {
+        return this._start;
+    }
+
+    generateWordObjectKey(text: string): string {
+        return `${text}_${this.wordObjectCounter++}`;
+    }
+
+    removeWordObject(text: string, wordObject: WordObject) {
+        const wordArray = this.wordStacker[text];
+        if (wordArray) {
+            const index = wordArray.indexOf(wordObject);
+            if (index > -1) {
+                wordArray.splice(index, 1);
+            }
+        }
+    }
+
+    update(dt: number) {
+        if (!this._start) return;
+
+        this._genTime -= dt;
+        if (this._genTime <= 0) {
+            this._genTime = Math.random() * (0.5 - this._level * 0.05);
+            createRandomWord(Math.floor(_mapWidth * Math.random()));
+        }
+
+        this._flushTime += dt;
+        if (this._flushTime >= 3) {
+            this._flushTime = 0;
+            for (let wordArray of Object.values(this.wordStacker)) {
+                wordArray.forEach((wordObject) => {
+                    if (wordObject.tileY() == _mapHeight - 1) {
+                        wordObject.destroy();
+                    }
+                });
+            }
+        }
+
+        this._levelAddTimer += dt;
+        if (this._levelAddTimer >= this._levelTimer) {
+            this._level++;
+            this._levelAddTimer = 0;
+
+            if (this._level > 8) {
+                this._level = 8;
+            }
+        }
+    }
+}
+
 class WordObject {
     public object;
     public text: string;
     private key: string;
 
     constructor(x: number, sprite: ScriptDynamicResource, text: string) {
-        this.key = `${text}_${wordObjectCounter++}`;
+        this.key = _game.generateWordObjectKey(text);
+        this.key = `${text}_${_game.wordObjectCounter++}`;
         this.text = text;
 
         ScriptMap.putObjectWithKey(x, 0, sprite, {
@@ -43,10 +147,7 @@ class WordObject {
         this.object = ScriptMap.getObjectWithKey(this.key);
         ScriptMap.moveObjectWithKey(this.key, x, _mapHeight - 1, false);
 
-        if (!WordStacker[text]) {
-            WordStacker[text] = [];
-        }
-        WordStacker[text].push(this);
+        _game.addWordObject(text, this);
     }
 
     public tileX(): number {
@@ -58,11 +159,10 @@ class WordObject {
     }
 
     destroy() {
-        const wordArray = WordStacker[this.text];
         ScriptMap.putObjectWithKey(this.object.tileX, this.object.tileY, null, {
             key: this.key
         });
-        wordArray.splice(wordArray.indexOf(this), 1)
+        _game.removeWordObject(this.text, this);
     }
 }
 
@@ -75,64 +175,34 @@ function createRandomWord(x) {
     new WordObject(x, WORD_DB[randomWord].sprite, randomWord);
 }
 
-let _start = false;
-let _genTime = 0;
-let _flushTime = 0;
+let _game: Game;
 
-let _level = 1;
-let _levelTimer = 15;
-let _levelAddTimer = 0;
+ScriptApp.onStart.Add(() => {
+    _game = new Game();
+})
 
 ScriptApp.onJoinPlayer.Add(function (player) {
     player.tag = {};
 })
 
 ScriptApp.addOnKeyDown(81, function (player) {
-    // createRandomWord(10);
-    _start = true;
+    if (_game && !_game.isStarted()) {
+        _game.start();
+    }
 })
 
 
 ScriptApp.onUpdate.Add((dt) => {
-    if (!_start) return;
-
-    _genTime -= dt;
-    if (_genTime <= 0) {
-        _genTime = Math.random() * (0.5 - _level * 0.05);
-        createRandomWord(Math.floor(_mapWidth * Math.random()));
-    }
-
-    _flushTime += dt;
-    if (_flushTime >= 3) {
-        _flushTime = 0;
-        for (let wordArray of Object.values(WordStacker)) {
-            wordArray.forEach((wordObject) => {
-                if (wordObject.tileY() == _mapHeight - 1) {
-                    wordObject.destroy();
-                }
-            })
-
-        }
-    }
-
-    _levelAddTimer += dt;
-    if (_levelAddTimer >= _levelTimer) {
-        _level++;
-        _levelAddTimer = 0;
-
-        if (_level > 8) {
-            _level = 8;
-        }
-    }
+    _game?.update(dt);
 })
 
 ScriptApp.onSay.Add((player, text) => {
-    if (_start) {
-        if (WordStacker.hasOwnProperty(text)) {
-            if (WordStacker[text][0]) {
-                incrementScore(player);
-                WordStacker[text][0].destroy();
-            }
+    if (_game.isStarted()) {
+        const wordObjects = _game.getWordObjectsForText(text);
+        if (wordObjects && wordObjects[0]) {
+            incrementScore(player);
+            player.playSound("correct.mp3");
+            wordObjects[0].destroy();
         }
     }
 })
