@@ -35,24 +35,158 @@ class PlayerScoreData {
     }
 }
 
+// State Interface
+interface GameState {
+    stateTime: number;
+
+    handleInput(game: Game): void;
+
+    update(game: Game, dt: number): void;
+}
+
+class ReadyState implements GameState {
+    stateTime: number;
+
+    constructor() {
+        this.stateTime = GAME_WAITING_TIME;
+    }
+
+    handleInput(game: Game) {
+
+    }
+
+    update(game: Game, dt: number) {
+        if (game._gameWaitingTime < 0) {
+            game.start();
+        } else {
+            showAppLabel(`☔ ${Math.floor(game._gameWaitingTime)}초 후 소나기 게임이 시작됩니다.`);
+        }
+        game._gameWaitingTime -= dt;
+    }
+}
+
+class PlayingState implements GameState {
+    stateTime: number;
+
+    constructor() {
+        this.stateTime = GAME_TIME;
+    }
+
+    handleInput(game: Game) {
+    }
+
+    update(game: Game, dt: number) {
+        if (game._gameTime < 0) {
+            game.setState(new GameEndState());
+        } else {
+            showAppLabel(`☔ ${Math.floor(game._gameTime)}초 후 소나기가 멈춥니다..`);
+            game._genTime -= dt;
+            if (game._genTime <= 0) {
+                game._genTime = Math.random() * (0.5 - game._level * 0.05);
+                createRandomWord(Math.floor(_mapWidth * Math.random()));
+            }
+
+            game._flushTime += dt;
+            if (game._flushTime >= 3) {
+                game._flushTime = 0;
+                for (let wordArray of Object.values(game.wordStacker)) {
+                    wordArray.forEach((wordObject) => {
+                        if (wordObject.tileY() == _mapHeight - 1) {
+                            wordObject.destroy();
+                        }
+                    });
+                }
+            }
+
+            game._levelAddTimer += dt;
+            if (game._levelAddTimer >= game._levelTimer) {
+                game._level++;
+                game._levelAddTimer = 0;
+
+                if (game._level > 2) {
+                    game._level = 2;
+                }
+            }
+        }
+        game._gameTime -= dt;
+    }
+}
+
+class PausedState implements GameState {
+    stateTime: number;
+
+    constructor() {
+        this.stateTime = GAME_WAITING_TIME;
+    }
+
+    handleInput(game: Game) {
+    }
+
+    update(game: Game) {
+    }
+}
+
+class GameEndState implements GameState {
+    stateTime: number;
+
+    constructor() {
+        this.stateTime = GAME_END_WAITING_TIME;
+    }
+
+    handleInput(game: Game) {
+
+    }
+
+    update(game: Game, dt: number) {
+        if (this.stateTime === GAME_END_WAITING_TIME) {
+            ScriptApp.playSound("victory.wav", false, true);
+            let gameResultMessage: string = "[ ☔ 게임 결과 ]";
+            game._sortedRankings.forEach((playerScoreData, index) => {
+                ScriptApp.sayToAll(index.toString());
+                if (index < 3) {
+                    gameResultMessage += `\n${index + 1}등: ${playerScoreData.name}(${playerScoreData.score}점)`;
+                } else {
+                    return;
+                }
+            })
+            showAppLabel(gameResultMessage, 8000);
+            game.init();
+        } else if (this.stateTime < 0) {
+            game.setState(new ReadyState());
+        }
+        this.stateTime -= dt;
+    }
+}
+
+const GAME_TIME = 60;
+const GAME_WAITING_TIME = 30;
+const GAME_END_WAITING_TIME = 10;
+
 class Game {
+    private state: GameState;
+
     private _start: boolean;
-    private _genTime: number;
-    private _flushTime: number;
-    private _level: number;
-    private _levelTimer: number;
-    private _levelAddTimer: number;
+    _genTime: number;
+    _flushTime: number;
+    _level: number;
+    _levelTimer: number;
+    _levelAddTimer: number;
     private _playerScoreMap: {
         [id: string]: PlayerScoreData
     };
+
+    _gameWaitingTime: number;
+    _gameTime: number;
+
     _sortedRankings: PlayerScoreData[];
     wordObjectCounter: number;
 
-    private wordStacker: {
+    wordStacker: {
         [text: string]: WordObject[];
     };
 
     constructor() {
+        this.state = new ReadyState();
         this.init();
     }
 
@@ -66,16 +200,39 @@ class Game {
         this.wordObjectCounter = 0;
         this._playerScoreMap = {};
         this._sortedRankings = [];
+        this._gameTime = GAME_TIME;
+        this._gameWaitingTime = GAME_WAITING_TIME;
 
         this.clearAllObjects();
         this.wordStacker = {};
+
+        for (const player of ScriptApp.players) {
+            player.tag.score = 0;
+        }
+    }
+
+    setState(state: GameState) {
+        this.state = state;
+    }
+
+    handleInput() {
+        this.state.handleInput(this);
     }
 
     start() {
         this._start = true;
+        this.setState(new PlayingState());
         for (const player of ScriptApp.players) {
             showRankWidget(player)
         }
+    }
+
+    pause() {
+        this.setState(new PausedState());
+    }
+
+    gameOver() {
+        this.setState(new GameEndState());
     }
 
     isStarted(): boolean {
@@ -84,7 +241,9 @@ class Game {
 
     restart() {
         this.init();
-        this.start();
+        ScriptApp.runLater(() => {
+            this.start();
+        }, 2)
     }
 
     addWordObject(text: string, wordObject: WordObject) {
@@ -95,6 +254,9 @@ class Game {
     }
 
     clearAllObjects() {
+        for (let word in this.wordStacker) {
+            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
+        }
         for (let word in this.wordStacker) {
             this.wordStacker[word].forEach(wordObject => wordObject.destroy());
         }
@@ -160,35 +322,13 @@ class Game {
     }
 
     update(dt: number) {
-        if (!this._start) return;
+        this.state.update(this, dt);
+        // if (!this._start) {
+        //
+        // } else {
+        //    
+        // }
 
-        this._genTime -= dt;
-        if (this._genTime <= 0) {
-            this._genTime = Math.random() * (0.5 - this._level * 0.05);
-            createRandomWord(Math.floor(_mapWidth * Math.random()));
-        }
-
-        this._flushTime += dt;
-        if (this._flushTime >= 3) {
-            this._flushTime = 0;
-            for (let wordArray of Object.values(this.wordStacker)) {
-                wordArray.forEach((wordObject) => {
-                    if (wordObject.tileY() == _mapHeight - 1) {
-                        wordObject.destroy();
-                    }
-                });
-            }
-        }
-
-        this._levelAddTimer += dt;
-        if (this._levelAddTimer >= this._levelTimer) {
-            this._level++;
-            this._levelAddTimer = 0;
-
-            if (this._level > 8) {
-                this._level = 8;
-            }
-        }
     }
 }
 
@@ -229,15 +369,6 @@ class WordObject {
     }
 }
 
-
-function createRandomWord(x) {
-    let wordArray = Object.keys(WORD_DB);
-    const randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
-    // ScriptApp.sayToAll(randomWord);
-
-    new WordObject(x, WORD_DB[randomWord].sprite, randomWord);
-}
-
 let _game: Game;
 
 ScriptApp.onStart.Add(() => {
@@ -249,13 +380,15 @@ ScriptApp.onJoinPlayer.Add(function (player) {
     if (_game.isStarted()) {
         showRankWidget(player);
     }
+    //@ts-ignore
+    // player.setCameraTarget()
 })
 
-ScriptApp.addOnKeyDown(81, function (player) {
-    if (_game && !_game.isStarted()) {
-        _game.start();
-    }
-})
+// ScriptApp.addOnKeyDown(81, function (player) {
+//     if (_game && !_game.isStarted()) {
+//         _game.start();
+//     }
+// })
 
 
 ScriptApp.onUpdate.Add((dt) => {
@@ -271,7 +404,23 @@ ScriptApp.onSay.Add((player, text) => {
             wordObjects[0].destroy();
         }
     }
+
+    if (text === "!start") {
+        if (_game.isStarted()) {
+            _game.restart();
+        } else {
+            _game.start();
+        }
+    }
 })
+
+function createRandomWord(x) {
+    let wordArray = Object.keys(WORD_DB);
+    const randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
+    // ScriptApp.sayToAll(randomWord);
+
+    new WordObject(x, WORD_DB[randomWord].sprite, randomWord);
+}
 
 function incrementScore(player) {
     player.tag.score = (player.tag.score || 0) + 1;
@@ -291,4 +440,29 @@ function showRankWidget(player) {
         type: "init",
         rankArray: _game._sortedRankings
     })
+}
+
+function showAppLabel(str, time = 1500) {
+    let message = `<span
+		style="
+		color: #270;
+			position: absolute;
+			margin: auto;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			height: max-content;
+			padding: 12px 0px;
+			width: 90%;
+			background-color: rgba(223, 242, 191, 0.8);
+			border-radius: 5px;
+			border-style: solid;
+			border-color: rgba(36, 241, 6, 0.46);
+			border-width: 1px;
+			box-shadow: 0px 0px 2px #259c08;
+			left: 50%;
+			transform: translate(-50%,0);
+		"
+	>${str}</span>`;
+    ScriptApp.showCustomLabel(message, 0xffffff, 0x000000, 0, 100, 1, time);
 }
