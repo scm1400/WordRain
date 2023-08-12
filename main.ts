@@ -5,33 +5,91 @@
 import "zep-script";
 import {ScriptDynamicResource, ScriptPlayer} from "zep-script";
 
+declare global {
+    namespace Time {
+        function GetTime(): number;
+
+        function GetUtcTime(): number;
+
+        function GetTimeInterval(lastTime: number, nowTime: number, AppDateType: any);
+
+    }
+
+    namespace DateType {
+        const SECONDS;
+
+    }
+}
+
 const [_mapWidth, _mapHeight] = [ScriptMap.width, ScriptMap.height];
+
+const effect_yellow = ScriptApp.loadSpritesheet("effect_1.png", 111, 88, {
+    //@ts-ignore
+    play: [0, 1, 2, 3, 4],
+}, 5);
+const effect_blue = ScriptApp.loadSpritesheet("effect_2.png", 288, 190, {
+    //@ts-ignore
+    play: [0, 1, 2, 3, 4],
+}, 5);
+
+const CSV_COLUM_INFO = {
+    word: 0,
+    score: 1,
+    jamoCount: 2,
+}
+
 //@ts-ignore
 const WORD_CSV = ScriptApp.loadCSV("words.csv");
+type WORD_INFO = {
+    sprite: ScriptDynamicResource,
+    score: number,
+    jamoCount: number,
+}
+
 const WORD_DB: {
-    [text: string]: {
-        sprite: ScriptDynamicResource,
-    }
+    [text: string]: WORD_INFO
 } = {};
 
-WORD_CSV.trim().split(/\r?\n/).forEach((word: string) => {
-    WORD_DB[word] = {
-        sprite: ScriptApp.loadSpritesheet(`${word}.png`),
+const SPECIAL_WORD_DB: {
+    [text: string]: WORD_INFO
+} = {};
+
+WORD_CSV.trim().split(/\r?\n/).forEach((row: string) => {
+    let colums = row.split(",");
+    const word = colums[CSV_COLUM_INFO.word];
+    const score = Number(colums[CSV_COLUM_INFO.score]);
+    const jamoCount = Number(colums[CSV_COLUM_INFO.jamoCount]);
+    if (score < 10) {
+        WORD_DB[word] = {
+            sprite: ScriptApp.loadSpritesheet(`${word}.png`),
+            score: score,
+            jamoCount: jamoCount
+        }
+    } else {
+        SPECIAL_WORD_DB[word] = {
+            sprite: ScriptApp.loadSpritesheet(`${word}.png`),
+            score: score,
+            jamoCount: jamoCount
+        }
     }
+
 })
 
 
 class PlayerScoreData {
     name: string;
-    score: number;
+    score: number
+    typingSpeed: number;
 
     constructor(player: ScriptPlayer) {
         this.name = player.name;
         this.score = player.tag.score;
+        this.typingSpeed = player.tag.typingSpeed;
     }
 
-    updateScore(score: number) {
-        this.score = score;
+    updateScore(player: ScriptPlayer) {
+        this.score = player.tag.score;
+        this.typingSpeed = player.tag.typingSpeed;
     }
 }
 
@@ -82,8 +140,12 @@ class PlayingState implements GameState {
             showAppLabel(`☔ ${Math.floor(game._gameTime)}초 후 소나기가 멈춥니다..`);
             game._genTime -= dt;
             if (game._genTime <= 0) {
-                game._genTime = Math.random() * (0.5 - game._level * 0.05);
-                createRandomWord(Math.floor(_mapWidth * Math.random()));
+                game._genTime = Math.random() * (1 - game._level * 0.03);
+                if (Math.random() <= 0.15) {
+                    createRandomWord(Math.floor(_mapWidth * Math.random()), true);
+                } else {
+                    createRandomWord(Math.floor(_mapWidth * Math.random()));
+                }
             }
 
             game._flushTime += dt;
@@ -92,7 +154,7 @@ class PlayingState implements GameState {
                 for (let wordArray of Object.values(game.wordStacker)) {
                     wordArray.forEach((wordObject) => {
                         if (wordObject.tileY() == _mapHeight - 1) {
-                            wordObject.destroy();
+                            wordObject.destroy(false);
                         }
                     });
                 }
@@ -142,7 +204,6 @@ class GameEndState implements GameState {
             ScriptApp.playSound("victory.wav", false, true);
             let gameResultMessage: string = "[ ☔ 게임 결과 ]";
             game._sortedRankings.forEach((playerScoreData, index) => {
-                ScriptApp.sayToAll(index.toString());
                 if (index < 3) {
                     gameResultMessage += `\n${index + 1}등: ${playerScoreData.name}(${playerScoreData.score}점)`;
                 } else {
@@ -204,10 +265,12 @@ class Game {
         this._gameWaitingTime = GAME_WAITING_TIME;
 
         this.clearAllObjects();
-        this.wordStacker = {};
+        if (!this.wordStacker) this.wordStacker = {};
 
         for (const player of ScriptApp.players) {
             player.tag.score = 0;
+            player.tag.jamoCount = 0;
+            player.tag.typeingSpeed = 0;
         }
     }
 
@@ -223,6 +286,7 @@ class Game {
         this._start = true;
         this.setState(new PlayingState());
         for (const player of ScriptApp.players) {
+            player.tag.startTime = Time.GetUtcTime();
             showRankWidget(player)
         }
     }
@@ -256,9 +320,11 @@ class Game {
     clearAllObjects() {
         for (let word in this.wordStacker) {
             this.wordStacker[word].forEach(wordObject => wordObject.destroy());
+            delete this.wordStacker[word];
         }
         for (let word in this.wordStacker) {
             this.wordStacker[word].forEach(wordObject => wordObject.destroy());
+            delete this.wordStacker[word];
         }
     }
 
@@ -287,7 +353,7 @@ class Game {
 
     updateScore(player: ScriptPlayer) {
         if (this._playerScoreMap.hasOwnProperty(player.id)) {
-            this._playerScoreMap[player.id].updateScore(player.tag.score);
+            this._playerScoreMap[player.id].updateScore(player);
         } else {
             this._playerScoreMap[player.id] = new PlayerScoreData(player);
         }
@@ -336,21 +402,32 @@ class WordObject {
     public object;
     public text: string;
     private key: string;
+    public score: number;
+    public jamoCount: number;
 
-    constructor(x: number, sprite: ScriptDynamicResource, text: string) {
-        this.key = _game.generateWordObjectKey(text);
-        this.key = `${text}_${_game.wordObjectCounter++}`;
-        this.text = text;
+    constructor(x: number, word: string) {
+        const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
+        const sprite = wordInfo.sprite;
+        
+        _game.addWordObject(word, this);
+        this.key = _game.generateWordObjectKey(word);
+        this.text = word;
+        this.score = wordInfo.score;
+        this.jamoCount = wordInfo.jamoCount;
 
+        let moveSpeedValue = 30;
+
+        // wordInfo가 SPECIAL_WORD_DB에서 가져온 경우 movespeed를 10으로 설정
+        if (SPECIAL_WORD_DB[word] === wordInfo) {
+            moveSpeedValue = 10;
+        }
+        
         ScriptMap.putObjectWithKey(x, 0, sprite, {
             key: this.key,
-            movespeed: 60
+            movespeed: moveSpeedValue
         });
-
         this.object = ScriptMap.getObjectWithKey(this.key);
         ScriptMap.moveObjectWithKey(this.key, x, _mapHeight - 1, false);
-
-        _game.addWordObject(text, this);
     }
 
     public tileX(): number {
@@ -361,11 +438,31 @@ class WordObject {
         return this.object.tileY;
     }
 
-    destroy() {
-        ScriptMap.putObjectWithKey(this.object.tileX, this.object.tileY, null, {
+    destroy(effect = true) {
+        const [x, y] = [this.object.tileX, this.object.tileY];
+        ScriptMap.putObjectWithKey(x, y, null, {
             key: this.key
         });
-        _game.removeWordObject(this.text, this);
+
+        if (effect) {
+            const animationKey = this.key + "_effect";
+            let effectSprite;
+            if (this.score < 10) {
+                effectSprite = effect_yellow
+            } else {
+                effectSprite = effect_blue
+            }
+            ScriptMap.putObjectWithKey(x, y, effectSprite, {
+                key: animationKey
+            })
+            ScriptMap.playObjectAnimationWithKey(animationKey, "play", 1);
+            ScriptApp.runLater(() => {
+                ScriptMap.putObjectWithKey(x, y, null, {
+                    key: animationKey
+                })
+            }, 1);
+            _game.removeWordObject(this.text, this);
+        }
     }
 }
 
@@ -377,7 +474,8 @@ ScriptApp.onStart.Add(() => {
 
 ScriptApp.onJoinPlayer.Add(function (player) {
     player.tag = {};
-    if (_game.isStarted()) {
+    if (_game && _game.isStarted()) {
+        player.tag.startTime = Time.GetUtcTime();
         showRankWidget(player);
     }
     //@ts-ignore
@@ -399,7 +497,7 @@ ScriptApp.onSay.Add((player, text) => {
     if (_game.isStarted()) {
         const wordObjects = _game.getWordObjectsForText(text);
         if (wordObjects && wordObjects[0]) {
-            incrementScore(player);
+            incrementScore(player, wordObjects[0]);
             player.playSound("correct.mp3");
             wordObjects[0].destroy();
         }
@@ -414,16 +512,24 @@ ScriptApp.onSay.Add((player, text) => {
     }
 })
 
-function createRandomWord(x) {
-    let wordArray = Object.keys(WORD_DB);
-    const randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
+function createRandomWord(x, special = false) {
+    let wordArray;
+    let randomWord;
+    if (!special) {
+        wordArray = Object.keys(WORD_DB)
+    } else {
+        wordArray = Object.keys(SPECIAL_WORD_DB)
+    }
+    randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
     // ScriptApp.sayToAll(randomWord);
 
-    new WordObject(x, WORD_DB[randomWord].sprite, randomWord);
+    new WordObject(x, randomWord);
 }
 
-function incrementScore(player) {
-    player.tag.score = (player.tag.score || 0) + 1;
+function incrementScore(player, wordInfo: WordObject) {
+    player.tag.score = (player.tag.score || 0) + wordInfo.score;
+    player.tag.jamoCount = (player.tag.jamoCount || 0) + wordInfo.jamoCount;
+    player.tag.typingSpeed = calculateTypingSpeed(player.tag.startTime, player.tag.jamoCount);
     player.title = `[ 점수: ${player.tag.score}점 ]`;
     player.sendUpdated();
     _game.updateScore(player);
@@ -435,7 +541,7 @@ function showRankWidget(player) {
         player.tag.rankWidget.destroy();
         player.tag.rankWidget = null;
     }
-    player.tag.rankWidget = player.showWidget("rankingBoard.html", "middleleft", 200, 400);
+    player.tag.rankWidget = player.showWidget("rankingBoard.html", "middleleft", 260, 400);
     player.tag.rankWidget.sendMessage({
         type: "init",
         rankArray: _game._sortedRankings
@@ -466,3 +572,32 @@ function showAppLabel(str, time = 1500) {
 	>${str}</span>`;
     ScriptApp.showCustomLabel(message, 0xffffff, 0x000000, 0, 100, 1, time);
 }
+
+function countJamos(s) {
+    let totalJamos = 0;
+
+    for (let i = 0; i < s.length; i++) {
+        const charCode = s.charCodeAt(i);
+
+        if (charCode >= 0xAC00 && charCode <= 0xD7A3) { // 한글 영역
+            // 자음과 모음 개수를 더함 (기본적으로 2개로 가정하고, 받침이 있는 경우 3개로 계산)
+            totalJamos += (charCode - 0xAC00) % 28 === 0 ? 2 : 3;
+        } else {
+            // 한글이 아닌 문자는 그대로 1개로 계산
+            totalJamos += 1;
+        }
+    }
+
+    return totalJamos;
+}
+
+function calculateTypingSpeed(startTime, count) {
+    const endTime = Time.GetUtcTime();
+
+    const elapsedTimeInMinutes = (endTime - startTime) / 60000;
+
+    const wordsPerMinute = count / elapsedTimeInMinutes;
+
+    return Math.floor(wordsPerMinute);
+}
+
