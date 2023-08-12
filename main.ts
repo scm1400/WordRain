@@ -141,7 +141,7 @@ class PlayingState implements GameState {
             game._genTime -= dt;
             if (game._genTime <= 0) {
                 game._genTime = Math.random() * (1 - game._level * 0.03);
-                if (Math.random() <= 0.15) {
+                if (Math.random() <= 0.05) {
                     createRandomWord(Math.floor(_mapWidth * Math.random()), true);
                 } else {
                     createRandomWord(Math.floor(_mapWidth * Math.random()));
@@ -319,12 +319,22 @@ class Game {
 
     clearAllObjects() {
         for (let word in this.wordStacker) {
-            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
-            delete this.wordStacker[word];
-        }
-        for (let word in this.wordStacker) {
-            this.wordStacker[word].forEach(wordObject => wordObject.destroy());
-            delete this.wordStacker[word];
+            this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
+                const objectExists = ScriptMap.getObjectWithKey(wordObject.key);
+
+                // ScriptMap에서 해당 객체가 있으면 destroy() 호출
+                if (objectExists) {
+                    wordObject.destroy();
+
+                    // destroy() 후에도 객체가 남아있는지 확인
+                    const objectStillExists = ScriptMap.getObjectWithKey(wordObject.key);
+
+                    // destroy() 후에도 객체가 남아있다면 배열에 남기기
+                    return objectStillExists;
+                } else {
+                    return false;
+                }
+            });
         }
     }
 
@@ -401,16 +411,17 @@ class Game {
 class WordObject {
     public object;
     public text: string;
-    private key: string;
+    public key: string;
     public score: number;
     public jamoCount: number;
 
     constructor(x: number, word: string) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
         const sprite = wordInfo.sprite;
-        
+
         _game.addWordObject(word, this);
-        this.key = _game.generateWordObjectKey(word);
+        const key = _game.generateWordObjectKey(word);
+        this.key = key;
         this.text = word;
         this.score = wordInfo.score;
         this.jamoCount = wordInfo.jamoCount;
@@ -421,13 +432,22 @@ class WordObject {
         if (SPECIAL_WORD_DB[word] === wordInfo) {
             moveSpeedValue = 10;
         }
-        
+
         ScriptMap.putObjectWithKey(x, 0, sprite, {
             key: this.key,
             movespeed: moveSpeedValue
         });
         this.object = ScriptMap.getObjectWithKey(this.key);
         ScriptMap.moveObjectWithKey(this.key, x, _mapHeight - 1, false);
+        ScriptApp.runLater(()=>{
+            let object = ScriptMap.getObjectWithKey(key);
+            if(object){
+                //@ts-ignore
+                ScriptMap.putObjectWithKey(object.tileX, object.tileY, null, {
+                    key: this.key,
+                });
+            }
+        }, 60)
     }
 
     public tileX(): number {
@@ -439,7 +459,7 @@ class WordObject {
     }
 
     destroy(effect = true) {
-        const [x, y] = [this.object.tileX, this.object.tileY];
+        const [x, y] = [this.tileX(), this.tileY()];
         ScriptMap.putObjectWithKey(x, y, null, {
             key: this.key
         });
@@ -455,7 +475,7 @@ class WordObject {
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
                 key: animationKey
             })
-            ScriptMap.playObjectAnimationWithKey(animationKey, "play", 1);
+            ScriptMap.playObjectAnimationWithKey(animationKey, "play", 0);
             ScriptApp.runLater(() => {
                 ScriptMap.putObjectWithKey(x, y, null, {
                     key: animationKey
@@ -509,6 +529,8 @@ ScriptApp.onSay.Add((player, text) => {
         } else {
             _game.start();
         }
+    } else if (text == "!clearObjects"){
+        _game.clearAllObjects();
     }
 })
 
