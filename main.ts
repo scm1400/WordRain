@@ -23,14 +23,19 @@ declare global {
 
 const [_mapWidth, _mapHeight] = [ScriptMap.width, ScriptMap.height];
 
-const effect_yellow = ScriptApp.loadSpritesheet("effect_1.png", 111, 88, {
+const effect_base = ScriptApp.loadSpritesheet("effect_base.png", 142, 123, {
     //@ts-ignore
-    play: [0, 1, 2, 3, 4],
-}, 5);
-const effect_blue = ScriptApp.loadSpritesheet("effect_2.png", 288, 190, {
+    play: [0, 1, 2, 3, 4, 5],
+}, 6);
+
+const effect_yellow = ScriptApp.loadSpritesheet("effect_1.png", 73, 69, {
     //@ts-ignore
-    play: [0, 1, 2, 3, 4],
-}, 5);
+    play: [0, 1, 2, 3, 4, 5, 6],
+}, 7);
+const effect_blue = ScriptApp.loadSpritesheet("effect_2.png", 129, 123, {
+    //@ts-ignore
+    play: [0, 1, 2, 3, 4, 5, 6],
+}, 7);
 
 const CSV_COLUM_INFO = {
     word: 0,
@@ -465,20 +470,22 @@ class WordObject {
         });
 
         if (effect) {
-            const animationKey = this.key + "_effect";
+            const baseAnimationKey = this.key + "_effect_base";
+            const mainAnimationKey = this.key + "_effect";
             let effectSprite;
             if (this.score < 10) {
                 effectSprite = effect_yellow
             } else {
                 effectSprite = effect_blue
             }
+
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
-                key: animationKey
+                key: mainAnimationKey
             })
-            ScriptMap.playObjectAnimationWithKey(animationKey, "play", 0);
+            ScriptMap.playObjectAnimationWithKey(mainAnimationKey, "play", 0);
             ScriptApp.runLater(() => {
                 ScriptMap.putObjectWithKey(x, y, null, {
-                    key: animationKey
+                    key: mainAnimationKey
                 })
             }, 1);
             _game.removeWordObject(this.text, this);
