@@ -23,16 +23,16 @@ declare global {
 
 const [_mapWidth, _mapHeight] = [ScriptMap.width, ScriptMap.height];
 
-const effect_base = ScriptApp.loadSpritesheet("effect_base.png", 142, 123, {
+const effect_special = ScriptApp.loadSpritesheet("effect_base.png", 142, 123, {
     //@ts-ignore
     play: [0, 1, 2, 3, 4, 5],
 }, 6);
 
-const effect_yellow = ScriptApp.loadSpritesheet("effect_1.png", 73, 69, {
+const effect_coin = ScriptApp.loadSpritesheet("effect_1.png", 73, 69, {
     //@ts-ignore
     play: [0, 1, 2, 3, 4, 5, 6],
 }, 7);
-const effect_blue = ScriptApp.loadSpritesheet("effect_2.png", 129, 123, {
+const effect_rainbow_coin = ScriptApp.loadSpritesheet("effect_2.png", 129, 123, {
     //@ts-ignore
     play: [0, 1, 2, 3, 4, 5, 6],
 }, 7);
@@ -41,6 +41,7 @@ const CSV_COLUM_INFO = {
     word: 0,
     score: 1,
     jamoCount: 2,
+    special:3
 }
 
 //@ts-ignore
@@ -49,6 +50,7 @@ type WORD_INFO = {
     sprite: ScriptDynamicResource,
     score: number,
     jamoCount: number,
+    isSpecial: boolean
 }
 
 const WORD_DB: {
@@ -64,17 +66,20 @@ WORD_CSV.trim().split(/\r?\n/).forEach((row: string) => {
     const word = colums[CSV_COLUM_INFO.word];
     const score = Number(colums[CSV_COLUM_INFO.score]);
     const jamoCount = Number(colums[CSV_COLUM_INFO.jamoCount]);
+    const isSpecial = Boolean(colums[CSV_COLUM_INFO.special]);
     if (score < 10) {
         WORD_DB[word] = {
             sprite: ScriptApp.loadSpritesheet(`${word}.png`),
             score: score,
-            jamoCount: jamoCount
+            jamoCount: jamoCount,
+            isSpecial: isSpecial
         }
     } else {
         SPECIAL_WORD_DB[word] = {
             sprite: ScriptApp.loadSpritesheet(`${word}.png`),
             score: score,
-            jamoCount: jamoCount
+            jamoCount: jamoCount,
+            isSpecial: isSpecial
         }
     }
 
@@ -419,6 +424,7 @@ class WordObject {
     public key: string;
     public score: number;
     public jamoCount: number;
+    public isSpecial: boolean
 
     constructor(x: number, word: string) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
@@ -430,6 +436,7 @@ class WordObject {
         this.text = word;
         this.score = wordInfo.score;
         this.jamoCount = wordInfo.jamoCount;
+        this.isSpecial = wordInfo.isSpecial;
 
         let moveSpeedValue = 30;
 
@@ -470,13 +477,15 @@ class WordObject {
         });
 
         if (effect) {
-            const baseAnimationKey = this.key + "_effect_base";
             const mainAnimationKey = this.key + "_effect";
             let effectSprite;
-            if (this.score < 10) {
-                effectSprite = effect_yellow
-            } else {
-                effectSprite = effect_blue
+            if(this.isSpecial){
+                effectSprite = effect_special;
+            }
+            else if (this.score < 10) {
+                effectSprite = effect_coin
+            } else if(this.score){
+                effectSprite = effect_rainbow_coin
             }
 
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
