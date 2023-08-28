@@ -84,7 +84,7 @@ WORD_CSV.trim().split(/\r?\n/).forEach((row: string) => {
     const word = colums[CSV_COLUM_INFO.word];
     const score = Math.floor(word.length / 2);
     const jamoCount = countJamos(word);
-    const isSpecial = false;
+    const isSpecial = score >= 4;
     // if (score < 10) {
     WORD_DB[word] = {
         sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
@@ -145,7 +145,7 @@ class ReadyState implements GameState {
         if (game._gameWaitingTime < 0) {
             game.start();
         } else {
-            showAppLabel(`☔ ${Math.floor(game._gameWaitingTime)}초 후 소나기 게임이 시작됩니다.`);
+            showAppLabel(`☔ ${Math.floor(game._gameWaitingTime)}초 후 단어 소나기 게임이 시작됩니다.`);
         }
         game._gameWaitingTime -= dt;
     }
@@ -165,7 +165,7 @@ class PlayingState implements GameState {
         if (game._gameTime < 0) {
             game.setState(new GameEndState());
         } else {
-            showAppLabel(`☔ ${Math.floor(game._gameTime)}초 후 소나기가 멈춥니다..`);
+            showAppLabel(`☔ ${Math.floor(game._gameTime)}초 후 단어 소나기가 멈춥니다..`);
             game._genTime -= dt;
             if (game._genTime <= 0) {
                 game._genTime = Math.random() * (30 / _mapWidth - game._level * 0.03 / _mapWidth * 30);
@@ -189,7 +189,7 @@ class PlayingState implements GameState {
                 for (let wordArray of Object.values(game.wordStacker)) {
                     wordArray.forEach((wordObject) => {
                         const key = wordObject.key;
-                        wordObject.y += 3 * TILE_SIZE / 60;
+                        wordObject.y += 3.5 * TILE_SIZE / 60;
                         for (const player of ScriptApp.players) {
                             //@ts-ignore
                             player.callPhaserFunc(key, 'setY', [wordObject.y]);
@@ -275,8 +275,8 @@ class GameEndState implements GameState {
     }
 }
 
-const GAME_TIME = 60;
-const GAME_WAITING_TIME = 30;
+const GAME_TIME = 70;
+const GAME_WAITING_TIME = 60;
 const GAME_END_WAITING_TIME = 10;
 
 class Game {
@@ -524,8 +524,8 @@ class WordObject {
                             fontSize: '24px',
                             fontFamily: FONT_FAMILY,
                             fontWeight: 'bold',
-                            color: '#FFFFFF',
-                            strokeThickness: 3,
+                            color: this.isSpecial ? '#D0312D' : '#FFFFFF',
+                            strokeThickness: 4,
                             stroke: '#333333',
                             shadow: {
                                 offsetY: 2,
@@ -682,7 +682,7 @@ function createRandomWord(x, special = false) {
 }
 
 function incrementScore(player, wordInfo: WordObject) {
-    player.tag.score = (player.tag.score || 0) + wordInfo.score;
+    player.tag.score = (player.tag.score || 0) + (wordInfo.isSpecial ? Math.floor(wordInfo.score * 1.5) : wordInfo.score);
     player.tag.jamoCount = (player.tag.jamoCount || 0) + wordInfo.jamoCount;
     player.tag.typingSpeed = calculateTypingSpeed(player.tag.startTime, player.tag.jamoCount);
     player.title = `[ 점수: ${player.tag.score}점 ]`;
@@ -706,26 +706,27 @@ function showRankWidget(player) {
 function showAppLabel(str, time = 1500) {
     let message = `<span
 		style="
-		color: #270;
+		color: #00775b;
 			position: absolute;
 			margin: auto;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			height: max-content;
-			padding: 12px 0px;
-			width: 90%;
-			background-color: rgba(223, 242, 191, 0.8);
+			padding: 12px 24px;
+			width: max-content;
+			background-color: rgba(191,242,234,0.8);
 			border-radius: 5px;
 			border-style: solid;
-			border-color: rgba(36, 241, 6, 0.46);
+			border-color: rgba(6,241,241,0.46);
 			border-width: 1px;
-			box-shadow: 0px 0px 2px #259c08;
+			box-shadow: 0px 0px 2px #089c9c;
 			left: 50%;
 			transform: translate(-50%,0);
+			top: 210px;
 		"
 	>${str}</span>`;
-    ScriptApp.showCustomLabel(message, 0xffffff, 0x000000, 0, 100, 1, time);
+    ScriptApp.showCustomLabel(message, 0xffffff, 0x000000, -250, 100, 1, time);
 }
 
 function countJamos(s) {
