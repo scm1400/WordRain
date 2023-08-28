@@ -170,7 +170,7 @@ class PlayingState implements GameState {
             if (game._genTime <= 0) {
                 game._genTime = Math.random() * (30 / _mapWidth - game._level * 0.03 / _mapWidth * 30);
                 if (UsePhaserGo) {
-                    if (Math.random() <= 0.05) {
+                    if (Math.random() <= 0.025) {
                         createRandomWord(Math.floor(_mapWidth * Math.random()), true);
                     } else {
                         createRandomWord(Math.floor(_mapWidth * Math.random()), false);
@@ -488,8 +488,9 @@ class WordObject {
     public x: number;
     public y: number;
     public playerId: string;
+    public lucky: boolean;
 
-    constructor(x: number, word: string, player = null) {
+    constructor(x: number, word: string) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
         if (!wordInfo) return;
 
@@ -500,9 +501,6 @@ class WordObject {
         this.score = wordInfo.score ?? 0;
         this.jamoCount = wordInfo.jamoCount;
         this.isSpecial = wordInfo.isSpecial;
-        if (player) {
-            this.playerId = player.id;
-        }
         this.y = 0;
         this.x = x * TILE_SIZE;
 
@@ -524,7 +522,7 @@ class WordObject {
                             fontSize: '24px',
                             fontFamily: FONT_FAMILY,
                             fontWeight: 'bold',
-                            color: this.isSpecial ? '#D0312D' : '#FFFFFF',
+                            color: this.lucky ? '#00FF00' : this.isSpecial ? '#D0312D' : '#FFFFFF',
                             strokeThickness: 4,
                             stroke: '#333333',
                             shadow: {
@@ -594,12 +592,12 @@ class WordObject {
                 effectSprite = EFFECT_SPECIAL.sprite;
                 offsetX = EFFECT_SPECIAL.offsetX;
                 offsetY = EFFECT_SPECIAL.offsetY;
-            } else if (this.score < 10) {
-                effectSprite = EFFECT_COIN.sprite;
+            } else if (this.lucky) {
+                effectSprite = EFFECT_RAINBOW_COIN.sprite;
                 offsetX = EFFECT_SPECIAL.offsetX;
                 offsetY = EFFECT_SPECIAL.offsetY;
-            } else if (this.score) {
-                effectSprite = EFFECT_RAINBOW_COIN.sprite;
+            } else {
+                effectSprite = EFFECT_COIN.sprite;
                 offsetX = EFFECT_SPECIAL.offsetX;
                 offsetY = EFFECT_SPECIAL.offsetY;
             }
@@ -668,21 +666,18 @@ ScriptApp.onSay.Add((player, text) => {
     }
 })
 
-function createRandomWord(x, special = false) {
+function createRandomWord(x, lucky = false) {
     let wordArray;
     let randomWord;
-    if (!special) {
-        wordArray = Object.keys(WORD_DB)
-    } else {
-        wordArray = Object.keys(SPECIAL_WORD_DB)
-    }
+    wordArray = Object.keys(WORD_DB)
     randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
     // ScriptApp.sayToAll(randomWord);
-    new WordObject(x, randomWord);
+    const wordObject = new WordObject(x, randomWord);
+    if (!wordObject.isSpecial && lucky) wordObject.lucky = true;
 }
 
 function incrementScore(player, wordInfo: WordObject) {
-    player.tag.score = (player.tag.score || 0) + (wordInfo.isSpecial ? Math.floor(wordInfo.score * 1.5) : wordInfo.score);
+    player.tag.score = (player.tag.score || 0) + (wordInfo.isSpecial ? Math.floor(wordInfo.score * 1.5) : wordInfo.lucky ? wordInfo.score * 2 : wordInfo.score);
     player.tag.jamoCount = (player.tag.jamoCount || 0) + wordInfo.jamoCount;
     player.tag.typingSpeed = calculateTypingSpeed(player.tag.startTime, player.tag.jamoCount);
     player.title = `[ 점수: ${player.tag.score}점 ]`;
