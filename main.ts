@@ -168,7 +168,7 @@ class PlayingState implements GameState {
             showAppLabel(`☔ ${Math.floor(game._gameTime)}초 후 소나기가 멈춥니다..`);
             game._genTime -= dt;
             if (game._genTime <= 0) {
-                game._genTime = Math.random() * (1 - game._level * 0.03);
+                game._genTime = Math.random() * (30 / _mapWidth - game._level * 0.03 / _mapWidth * 30);
                 if (UsePhaserGo) {
                     if (Math.random() <= 0.05) {
                         createRandomWord(Math.floor(_mapWidth * Math.random()), true);
@@ -186,15 +186,15 @@ class PlayingState implements GameState {
             }
 
             if (UsePhaserGo) {
-                for (const player of ScriptApp.players) {
-                    for (let wordArray of Object.values(game.wordStacker)) {
-                        wordArray.forEach((wordObject) => {
-                            const key = wordObject.key;
-                            wordObject.y += 2 * TILE_SIZE / 60;
+                for (let wordArray of Object.values(game.wordStacker)) {
+                    wordArray.forEach((wordObject) => {
+                        const key = wordObject.key;
+                        wordObject.y += 3 * TILE_SIZE / 60;
+                        for (const player of ScriptApp.players) {
                             //@ts-ignore
                             player.callPhaserFunc(key, 'setY', [wordObject.y]);
-                        });
-                    }
+                        }
+                    });
                 }
             }
 
@@ -375,13 +375,13 @@ class Game {
 
     clearAllObjects() {
         if (UsePhaserGo) {
-            for (const player of ScriptApp.players) {
-                for (let word in this.wordStacker) {
-                    this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
-                        //@ts-ignore
+            for (let word in this.wordStacker) {
+                this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
+                    for (const player of ScriptApp.players) {
+                        //@ts-ignore                                                                               
                         player.removePhaserGo(wordObject.key);
-                    })
-                }
+                    }
+                })
             }
             return false;
         } else {
@@ -513,32 +513,35 @@ class WordObject {
             moveSpeedValue = 10;
         }
 
-        if (UsePhaserGo && player) {
-            player.addPhaserGo({
-                text: {
-                    name: key, x: x * TILE_SIZE, y: 0,
-                    text: word,
-                    style: {
-                        fontSize: '24px',
-                        fontFamily: FONT_FAMILY,
-                        fontWeight: 'bold',
-                        color: '#FFFFFF',
-                        strokeThickness: 3,
-                        stroke: '#333333',
-                        shadow: {
-                            offsetY: 2,
-                            color: '#333333',
-                            fill: true,
-                            blur: 2,
-                            offsetX: 2,
-                            stroke: true,
+        if (UsePhaserGo) {
+            for (const player of ScriptApp.players) {
+                //@ts-ignore
+                player.addPhaserGo({
+                    text: {
+                        name: key, x: x * TILE_SIZE, y: 0,
+                        text: word,
+                        style: {
+                            fontSize: '24px',
+                            fontFamily: FONT_FAMILY,
+                            fontWeight: 'bold',
+                            color: '#FFFFFF',
+                            strokeThickness: 3,
+                            stroke: '#333333',
+                            shadow: {
+                                offsetY: 2,
+                                color: '#333333',
+                                fill: true,
+                                blur: 2,
+                                offsetX: 2,
+                                stroke: true,
+                            },
+                            resolution: 2,
                         },
-                        resolution: 2,
-                    },
-                    origin: [0.5, 1]
-                }
-            });
-            player.callPhaserFunc(key, 'setDepth', [10]);
+                        origin: [0.5, 1]
+                    }
+                });
+            }
+            // player.callPhaserFunc(key, 'setDepth', [10]);
         } else {
             const sprite = wordInfo.sprite;
             ScriptMap.putObjectWithKey(x, 0, sprite, {
@@ -557,8 +560,6 @@ class WordObject {
                 }
             }, 60)
         }
-
-
     }
 
     public tileX(): number {
@@ -574,9 +575,8 @@ class WordObject {
     destroy(effect = true) {
         const [x, y] = [this.tileX(), this.tileY()];
         if (UsePhaserGo) {
-            const player = ScriptApp.getPlayerByID(this.playerId);
-            if (player) {
-                //@ts-ignore
+            for (const player of ScriptApp.players) {
+                //@ts-ignore                      
                 player.removePhaserGo(this.key);
             }
         } else {
@@ -678,14 +678,7 @@ function createRandomWord(x, special = false) {
     }
     randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
     // ScriptApp.sayToAll(randomWord);
-    if (UsePhaserGo) {
-        for (const player of ScriptApp.players) {
-            new WordObject(x, randomWord, player);
-        }
-    } else {
-        new WordObject(x, randomWord);
-    }
-
+    new WordObject(x, randomWord);
 }
 
 function incrementScore(player, wordInfo: WordObject) {
