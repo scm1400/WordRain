@@ -23,25 +23,36 @@ declare global {
 
 const [_mapWidth, _mapHeight] = [ScriptMap.width, ScriptMap.height];
 
-const effect_special = ScriptApp.loadSpritesheet("effect_base.png", 142, 123, {
-    //@ts-ignore
-    play: [0, 1, 2, 3, 4, 5],
-}, 6);
+const EFFECT_SPECIAL = {
+    sprite: ScriptApp.loadSpritesheet("effect_base.png", 142, 123, {
+        //@ts-ignore
+        play: [0, 1, 2, 3, 4, 5],
+    }, 6),
+    offsetX: -71,
+    offsetY: -123 + 32
+}
 
-const effect_coin = ScriptApp.loadSpritesheet("effect_1.png", 73, 69, {
-    //@ts-ignore
-    play: [0, 1, 2, 3, 4, 5, 6],
-}, 7);
-const effect_rainbow_coin = ScriptApp.loadSpritesheet("effect_2.png", 129, 123, {
-    //@ts-ignore
-    play: [0, 1, 2, 3, 4, 5, 6],
-}, 7);
+const EFFECT_COIN = {
+    sprite: ScriptApp.loadSpritesheet("effect_1.png", 73, 69, {
+        //@ts-ignore
+        play: [0, 1, 2, 3, 4, 5, 6],
+    }, 7),
+    offsetX: -36,
+    offsetY: -69 + 32
+}
+
+const EFFECT_RAINBOW_COIN = {
+    sprite: ScriptApp.loadSpritesheet("effect_2.png", 129, 123, {
+        //@ts-ignore
+        play: [0, 1, 2, 3, 4, 5, 6],
+    }, 7),
+    offsetX: -64,
+    offsetY: -123 + 32
+}
 
 const CSV_COLUM_INFO = {
     word: 0,
-    score: 1,
-    jamoCount: 2,
-    special:3
+    special: 1
 }
 
 //@ts-ignore
@@ -61,28 +72,35 @@ const SPECIAL_WORD_DB: {
     [text: string]: WORD_INFO
 } = {};
 
+let UsePhaserGo = true;
+const TILE_SIZE = 32;
+const FONT_FAMILY =
+    "'Pretendard Std', 'Pretendard', 'Pretendard JP', -apple-system, " +
+    "blinkmacsystemfont, system-ui, roboto, 'Helvetica Neue', 'Segoe UI', " +
+    "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
+
 WORD_CSV.trim().split(/\r?\n/).forEach((row: string) => {
     let colums = row.split(",");
     const word = colums[CSV_COLUM_INFO.word];
-    const score = Number(colums[CSV_COLUM_INFO.score]);
-    const jamoCount = Number(colums[CSV_COLUM_INFO.jamoCount]);
-    const isSpecial = Boolean(colums[CSV_COLUM_INFO.special]);
-    if (score < 10) {
-        WORD_DB[word] = {
-            sprite: ScriptApp.loadSpritesheet(`${word}.png`),
-            score: score,
-            jamoCount: jamoCount,
-            isSpecial: isSpecial
-        }
-    } else {
-        SPECIAL_WORD_DB[word] = {
-            sprite: ScriptApp.loadSpritesheet(`${word}.png`),
-            score: score,
-            jamoCount: jamoCount,
-            isSpecial: isSpecial
-        }
+    const score = Math.floor(word.length / 2);
+    const jamoCount = countJamos(word);
+    const isSpecial = false;
+    // if (score < 10) {
+    WORD_DB[word] = {
+        sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
+        score: score ?? 1,
+        jamoCount: jamoCount ?? 1,
+        isSpecial: isSpecial
     }
-
+    // } else {
+    //     SPECIAL_WORD_DB[word] = {
+    //         sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
+    //         score: score,
+    //         jamoCount: jamoCount,
+    //         isSpecial: isSpecial
+    //     }
+    // }
+    //
 })
 
 
@@ -151,10 +169,32 @@ class PlayingState implements GameState {
             game._genTime -= dt;
             if (game._genTime <= 0) {
                 game._genTime = Math.random() * (1 - game._level * 0.03);
-                if (Math.random() <= 0.05) {
-                    createRandomWord(Math.floor(_mapWidth * Math.random()), true);
+                if (UsePhaserGo) {
+                    if (Math.random() <= 0.05) {
+                        createRandomWord(Math.floor(_mapWidth * Math.random()), true);
+                    } else {
+                        createRandomWord(Math.floor(_mapWidth * Math.random()), false);
+                    }
                 } else {
-                    createRandomWord(Math.floor(_mapWidth * Math.random()));
+                    if (Math.random() <= 0.05) {
+                        createRandomWord(Math.floor(_mapWidth * Math.random()), true);
+                    } else {
+                        createRandomWord(Math.floor(_mapWidth * Math.random()));
+                    }
+                }
+
+            }
+
+            if (UsePhaserGo) {
+                for (const player of ScriptApp.players) {
+                    for (let wordArray of Object.values(game.wordStacker)) {
+                        wordArray.forEach((wordObject) => {
+                            const key = wordObject.key;
+                            wordObject.y += 2 * TILE_SIZE / 60;
+                            //@ts-ignore
+                            player.callPhaserFunc(key, 'setY', [wordObject.y]);
+                        });
+                    }
                 }
             }
 
@@ -163,8 +203,14 @@ class PlayingState implements GameState {
                 game._flushTime = 0;
                 for (let wordArray of Object.values(game.wordStacker)) {
                     wordArray.forEach((wordObject) => {
-                        if (wordObject.tileY() == _mapHeight - 1) {
-                            wordObject.destroy(false);
+                        if (UsePhaserGo) {
+                            if (Math.floor(wordObject.y / 32) >= _mapHeight - 1) {
+                                wordObject.destroy(false);
+                            }
+                        } else {
+                            if (wordObject.tileY() == _mapHeight - 1) {
+                                wordObject.destroy(false);
+                            }
                         }
                     });
                 }
@@ -328,23 +374,36 @@ class Game {
     }
 
     clearAllObjects() {
-        for (let word in this.wordStacker) {
-            this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
-                const objectExists = ScriptMap.getObjectWithKey(wordObject.key);
-
-                // ScriptMap에서 해당 객체가 있으면 destroy() 호출
-                if (objectExists) {
-                    wordObject.destroy();
-
-                    // destroy() 후에도 객체가 남아있는지 확인
-                    const objectStillExists = ScriptMap.getObjectWithKey(wordObject.key);
-
-                    // destroy() 후에도 객체가 남아있다면 배열에 남기기
-                    return objectStillExists;
-                } else {
-                    return false;
+        if (UsePhaserGo) {
+            for (const player of ScriptApp.players) {
+                for (let word in this.wordStacker) {
+                    this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
+                        //@ts-ignore
+                        player.removePhaserGo(wordObject.key);
+                    })
                 }
-            });
+            }
+            return false;
+        } else {
+            for (let word in this.wordStacker) {
+                this.wordStacker[word] = this.wordStacker[word].filter((wordObject) => {
+                        const objectExists = ScriptMap.getObjectWithKey(wordObject.key);
+
+                        // ScriptMap에서 해당 객체가 있으면 destroy() 호출
+                        if (objectExists) {
+                            wordObject.destroy();
+
+                            // destroy() 후에도 객체가 남아있는지 확인
+                            const objectStillExists = ScriptMap.getObjectWithKey(wordObject.key);
+
+                            // destroy() 후에도 객체가 남아있다면 배열에 남기기
+                            return objectStillExists;
+                        } else {
+                            return false;
+                        }
+                    }
+                );
+            }
         }
     }
 
@@ -418,25 +477,34 @@ class Game {
     }
 }
 
+
 class WordObject {
     public object;
     public text: string;
     public key: string;
     public score: number;
     public jamoCount: number;
-    public isSpecial: boolean
+    public isSpecial: boolean;
+    public x: number;
+    public y: number;
+    public playerId: string;
 
-    constructor(x: number, word: string) {
+    constructor(x: number, word: string, player = null) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
-        const sprite = wordInfo.sprite;
+        if (!wordInfo) return;
 
         _game.addWordObject(word, this);
         const key = _game.generateWordObjectKey(word);
         this.key = key;
         this.text = word;
-        this.score = wordInfo.score;
+        this.score = wordInfo.score ?? 0;
         this.jamoCount = wordInfo.jamoCount;
         this.isSpecial = wordInfo.isSpecial;
+        if (player) {
+            this.playerId = player.id;
+        }
+        this.y = 0;
+        this.x = x * TILE_SIZE;
 
         let moveSpeedValue = 30;
 
@@ -445,51 +513,101 @@ class WordObject {
             moveSpeedValue = 10;
         }
 
-        ScriptMap.putObjectWithKey(x, 0, sprite, {
-            key: this.key,
-            movespeed: moveSpeedValue
-        });
-        this.object = ScriptMap.getObjectWithKey(this.key);
-        ScriptMap.moveObjectWithKey(this.key, x, _mapHeight - 1, false);
-        ScriptApp.runLater(()=>{
-            let object = ScriptMap.getObjectWithKey(key);
-            if(object){
-                //@ts-ignore
-                ScriptMap.putObjectWithKey(object.tileX, object.tileY, null, {
-                    key: this.key,
-                });
-            }
-        }, 60)
+        if (UsePhaserGo && player) {
+            player.addPhaserGo({
+                text: {
+                    name: key, x: x * TILE_SIZE, y: 0,
+                    text: word,
+                    style: {
+                        fontSize: '24px',
+                        fontFamily: FONT_FAMILY,
+                        fontWeight: 'bold',
+                        color: '#FFFFFF',
+                        strokeThickness: 3,
+                        stroke: '#333333',
+                        shadow: {
+                            offsetY: 2,
+                            color: '#333333',
+                            fill: true,
+                            blur: 2,
+                            offsetX: 2,
+                            stroke: true,
+                        },
+                        resolution: 2,
+                    },
+                    origin: [0.5, 1]
+                }
+            });
+            player.callPhaserFunc(key, 'setDepth', [10]);
+        } else {
+            const sprite = wordInfo.sprite;
+            ScriptMap.putObjectWithKey(x, 0, sprite, {
+                key: this.key,
+                movespeed: moveSpeedValue
+            });
+            this.object = ScriptMap.getObjectWithKey(this.key);
+            ScriptMap.moveObjectWithKey(this.key, x, _mapHeight - 1, false);
+            ScriptApp.runLater(() => {
+                let object = ScriptMap.getObjectWithKey(key);
+                if (object) {
+                    //@ts-ignore
+                    ScriptMap.putObjectWithKey(object.tileX, object.tileY, null, {
+                        key: this.key,
+                    });
+                }
+            }, 60)
+        }
+
+
     }
 
     public tileX(): number {
+        if (UsePhaserGo) return Math.floor(this.x / 32);
         return this.object.tileX;
     }
 
     public tileY(): number {
+        if (UsePhaserGo) return Math.floor(this.y / 32);
         return this.object.tileY;
     }
 
     destroy(effect = true) {
         const [x, y] = [this.tileX(), this.tileY()];
-        ScriptMap.putObjectWithKey(x, y, null, {
-            key: this.key
-        });
+        if (UsePhaserGo) {
+            const player = ScriptApp.getPlayerByID(this.playerId);
+            if (player) {
+                //@ts-ignore
+                player.removePhaserGo(this.key);
+            }
+        } else {
+            ScriptMap.putObjectWithKey(x, y, null, {
+                key: this.key
+            });
+        }
 
         if (effect) {
             const mainAnimationKey = this.key + "_effect";
             let effectSprite;
-            if(this.isSpecial){
-                effectSprite = effect_special;
-            }
-            else if (this.score < 10) {
-                effectSprite = effect_coin
-            } else if(this.score){
-                effectSprite = effect_rainbow_coin
+            let offsetX = 0;
+            let offsetY = 0;
+            if (this.isSpecial) {
+                effectSprite = EFFECT_SPECIAL.sprite;
+                offsetX = EFFECT_SPECIAL.offsetX;
+                offsetY = EFFECT_SPECIAL.offsetY;
+            } else if (this.score < 10) {
+                effectSprite = EFFECT_COIN.sprite;
+                offsetX = EFFECT_SPECIAL.offsetX;
+                offsetY = EFFECT_SPECIAL.offsetY;
+            } else if (this.score) {
+                effectSprite = EFFECT_RAINBOW_COIN.sprite;
+                offsetX = EFFECT_SPECIAL.offsetX;
+                offsetY = EFFECT_SPECIAL.offsetY;
             }
 
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
-                key: mainAnimationKey
+                key: mainAnimationKey,
+                offsetX: 0,
+                offsetY: 0
             })
             ScriptMap.playObjectAnimationWithKey(mainAnimationKey, "play", 0);
             ScriptApp.runLater(() => {
@@ -545,7 +663,7 @@ ScriptApp.onSay.Add((player, text) => {
         } else {
             _game.start();
         }
-    } else if (text == "!clearObjects"){
+    } else if (text == "!clearObjects") {
         _game.clearAllObjects();
     }
 })
@@ -560,8 +678,14 @@ function createRandomWord(x, special = false) {
     }
     randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
     // ScriptApp.sayToAll(randomWord);
+    if (UsePhaserGo) {
+        for (const player of ScriptApp.players) {
+            new WordObject(x, randomWord, player);
+        }
+    } else {
+        new WordObject(x, randomWord);
+    }
 
-    new WordObject(x, randomWord);
 }
 
 function incrementScore(player, wordInfo: WordObject) {
@@ -638,4 +762,18 @@ function calculateTypingSpeed(startTime, count) {
 
     return Math.floor(wordsPerMinute);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
