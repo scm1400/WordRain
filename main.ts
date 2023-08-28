@@ -170,7 +170,7 @@ class PlayingState implements GameState {
             if (game._genTime <= 0) {
                 game._genTime = Math.random() * (30 / _mapWidth - game._level * 0.03 / _mapWidth * 30);
                 if (UsePhaserGo) {
-                    if (Math.random() <= 0.025) {
+                    if (Math.random() <= 0.04) {
                         createRandomWord(Math.floor(_mapWidth * Math.random()), true);
                     } else {
                         createRandomWord(Math.floor(_mapWidth * Math.random()), false);
@@ -490,7 +490,7 @@ class WordObject {
     public playerId: string;
     public lucky: boolean;
 
-    constructor(x: number, word: string) {
+    constructor(x: number, word: string, lucky =  false) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
         if (!wordInfo) return;
 
@@ -503,13 +503,9 @@ class WordObject {
         this.isSpecial = wordInfo.isSpecial;
         this.y = 0;
         this.x = x * TILE_SIZE;
+        this.lucky =  lucky;
 
         let moveSpeedValue = 30;
-
-        // wordInfo가 SPECIAL_WORD_DB에서 가져온 경우 movespeed를 10으로 설정
-        if (SPECIAL_WORD_DB[word] === wordInfo) {
-            moveSpeedValue = 10;
-        }
 
         if (UsePhaserGo) {
             for (const player of ScriptApp.players) {
@@ -648,10 +644,17 @@ ScriptApp.onUpdate.Add((dt) => {
 ScriptApp.onSay.Add((player, text) => {
     if (_game.isStarted()) {
         const wordObjects = _game.getWordObjectsForText(text);
-        if (wordObjects && wordObjects[0]) {
-            incrementScore(player, wordObjects[0]);
-            player.playSound("correct.mp3");
-            wordObjects[0].destroy();
+        if (wordObjects && wordObjects.length > 0) {
+            let firstWordObject = wordObjects[0];
+            incrementScore(player, firstWordObject);
+            if (firstWordObject.lucky) {
+                player.playSound("rainbow.wav");
+            } else if (firstWordObject.isSpecial) {
+                player.playSound("boom.wav");
+            } else {
+                player.playSound("correct.mp3");
+            }
+            firstWordObject.destroy();
         }
     }
 
@@ -672,8 +675,7 @@ function createRandomWord(x, lucky = false) {
     wordArray = Object.keys(WORD_DB)
     randomWord = wordArray[Math.floor(Math.random() * wordArray.length)];
     // ScriptApp.sayToAll(randomWord);
-    const wordObject = new WordObject(x, randomWord);
-    if (!wordObject.isSpecial && lucky) wordObject.lucky = true;
+    const wordObject = new WordObject(x, randomWord, lucky);
 }
 
 function incrementScore(player, wordInfo: WordObject) {
