@@ -28,8 +28,8 @@ const EFFECT_SPECIAL = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5],
     }, 6),
-    offsetX: -55,
-    offsetY: -55
+    offsetX: -71,
+    offsetY: -61
 }
 
 const EFFECT_COIN = {
@@ -37,8 +37,8 @@ const EFFECT_COIN = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5, 6],
     }, 7),
-    offsetX: 0,
-    offsetY: 10
+    offsetX: -36,
+    offsetY: -34
 }
 
 const EFFECT_RAINBOW_COIN = {
@@ -46,8 +46,8 @@ const EFFECT_RAINBOW_COIN = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5, 6],
     }, 7),
-    offsetX: -48,
-    offsetY: -45
+    offsetX: -64,
+    offsetY: -61
 }
 
 const CSV_COLUM_INFO = {
@@ -56,7 +56,7 @@ const CSV_COLUM_INFO = {
 }
 
 //@ts-ignore
-const WORD_CSV = ScriptApp.loadCSV("words.csv");
+const DEFAULT_WORD_CSV = ScriptApp.loadCSV("words.csv");
 type WORD_INFO = {
     sprite: ScriptDynamicResource,
     score: number,
@@ -65,6 +65,10 @@ type WORD_INFO = {
 }
 
 const WORD_DB: {
+    [text: string]: WORD_INFO
+} = {};
+
+const CUSTOM_WORD_DB: {
     [text: string]: WORD_INFO
 } = {};
 
@@ -78,31 +82,6 @@ const FONT_FAMILY =
     "'Pretendard Std', 'Pretendard', 'Pretendard JP', -apple-system, " +
     "blinkmacsystemfont, system-ui, roboto, 'Helvetica Neue', 'Segoe UI', " +
     "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif";
-
-WORD_CSV.trim().split(/\r?\n/).forEach((row: string) => {
-    let colums = row.split(",");
-    const word = colums[CSV_COLUM_INFO.word];
-    const score = Math.floor(word.length / 2);
-    const jamoCount = countJamos(word);
-    const isSpecial = score >= 4;
-    // if (score < 10) {
-    WORD_DB[word] = {
-        sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
-        score: score ?? 1,
-        jamoCount: jamoCount ?? 1,
-        isSpecial: isSpecial
-    }
-    // } else {
-    //     SPECIAL_WORD_DB[word] = {
-    //         sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
-    //         score: score,
-    //         jamoCount: jamoCount,
-    //         isSpecial: isSpecial
-    //     }
-    // }
-    //
-})
-
 
 class PlayerScoreData {
     name: string;
@@ -534,7 +513,7 @@ class WordObject {
                     }
                 });
                 //@ts-ignore
-                // player.callPhaserFunc(key, 'setOrigin', [0.5, 0.5]);
+                player.callPhaserFunc(key, 'setOrigin', [0.5, 0.5]);
             }
         } else {
             const sprite = wordInfo.sprite;
@@ -590,12 +569,12 @@ class WordObject {
                 offsetY = EFFECT_SPECIAL.offsetY;
             } else if (this.lucky) {
                 effectSprite = EFFECT_RAINBOW_COIN.sprite;
-                offsetX = EFFECT_SPECIAL.offsetX;
-                offsetY = EFFECT_SPECIAL.offsetY;
+                offsetX = EFFECT_RAINBOW_COIN.offsetX;
+                offsetY = EFFECT_RAINBOW_COIN.offsetY;
             } else {
                 effectSprite = EFFECT_COIN.sprite;
-                offsetX = EFFECT_SPECIAL.offsetX;
-                offsetY = EFFECT_SPECIAL.offsetY;
+                offsetX = EFFECT_COIN.offsetX;
+                offsetY = EFFECT_COIN.offsetY;
             }
 
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
@@ -616,6 +595,10 @@ class WordObject {
 
 let _game: Game;
 
+ScriptApp.onInit.Add(() => {
+    parseCSV(DEFAULT_WORD_CSV, false);
+})
+
 ScriptApp.onStart.Add(() => {
     _game = new Game();
 })
@@ -626,16 +609,11 @@ ScriptApp.onJoinPlayer.Add(function (player) {
         player.tag.startTime = Time.GetUtcTime();
         showRankWidget(player);
     }
-    //@ts-ignore
-    // player.setCameraTarget()
+
+    if (isAdmin(player) && !player.isMobile) {
+        showUploadWidget(player);
+    }
 })
-
-// ScriptApp.addOnKeyDown(81, function (player) {
-//     if (_game && !_game.isStarted()) {
-//         _game.start();
-//     }
-// })
-
 
 ScriptApp.onUpdate.Add((dt) => {
     _game?.update(dt);
@@ -754,6 +732,150 @@ function calculateTypingSpeed(startTime, count) {
     return Math.floor(wordsPerMinute);
 }
 
+function showUploadWidget(player) {
+    player.tag.uploadWidget = player.showWidget("upload.html", "middle", 0, 0);
+    player.tag.uploadWidget.sendMessage({
+        type: "init",
+        quizData: WORD_DB,
+        // fileName: _fileName,
+        localizeContainer: player.tag.localizeContainer
+    })
+    player.tag.uploadWidget.onMessage.Add(function (sender, data) {
+        const type = data.type;
+        switch (type) {
+            case "back": {
+                if (sender.tag.uploadWidget) {
+                    sender.tag.uploadWidget.destroy();
+                    sender.tag.uploadWidget = null;
+                }
+                if (sender.tag.widget) {
+                    sender.tag.widget.sendMessage({
+                        type: "show"
+                    })
+                }
+                break;
+            }
+            case "close": {
+                if (sender.tag.uploadWidget) {
+                    sender.tag.uploadWidget.destroy();
+                    sender.tag.uploadWidget = null;
+                }
+                if (sender.tag.widget) {
+                    sender.tag.widget.sendMessage({
+                        type: "miniMode"
+                    })
+                }
+                break;
+            }
+            case "uploadCsv": {
+                if (!isAdmin(sender)) return;
+                // _tempFileName = data.fileName;
+                parseCSV(data.csvContent, true);
+                break;
+            }
+            case "requestApplyQuizData": {
+                if (!isAdmin(sender)) return;
+                if (sender.tag.uploadWidget) {
+                    sender.tag.uploadWidget.destroy();
+                    sender.tag.uploadWidget = null;
+                }
+                // if (_tempQuizData.length === 10) {
+                //     ScriptApp.getStorage(() => {
+                //         const appStorage = JSON.parse(ScriptApp.storage);
+                //         _quizData = _tempQuizData;
+                //         appStorage.quizData = _tempQuizData;
+                //         appStorage.fileName = _tempFileName;
+                //         ScriptApp.setStorage(JSON.stringify(appStorage));
+                //         // sender.tag.uploadWidget.sendMessage({type: "responseApplyQuizData"});
+                //         DeleteScoreImage();
+                //         for (const player of ScriptApp.players) {
+                //             if (!player) continue;
+                //             player.tag.point = 0;
+                //             player.tag.quizCount = 0;
+                //             player.tag.isComplete = false;
+                //             player.tag.solveData = {};
+                //
+                //             player.spawnAt(getRandomInt(1, 11), getRandomInt(126, 131))
+                //             player.hidden = false;
+                //             player.title = "";
+                //             player.sendUpdated();
+                //
+                //             putQuizObjects(player);
+                //         }
+                //     })
+                // }
+                break;
+            }
+        }
+    })
+}
+
+function parseCSV(csvContent, custom = false) {
+    let parsedDataArray = [];
+    let lines = csvContent.trim().split(/\r?\n/);
+
+    for (let index = 0; index < lines.length; index++) {
+        let line = lines[index];
+        let wordDataArray = [];
+        let cursor = 0;
+        let inQuote = false;
+        let buffer = '';
+
+        while (cursor < line.length) {
+            const currentChar = line[cursor];
+            if (currentChar === '"') {
+                if (inQuote) {
+                    if (cursor + 1 < line.length && line[cursor + 1] === '"') {
+                        buffer += currentChar;
+                        cursor++;
+                    } else {
+                        inQuote = false;
+                    }
+                } else {
+                    inQuote = true;
+                }
+            } else if (currentChar === ',' && !inQuote) {
+                setWordDB(buffer.trim());
+                // wordDataArray.push(buffer.trim());
+                buffer = '';
+            } else {
+                buffer += currentChar;
+            }
+            cursor++;
+        }
+        if (buffer) {
+            setWordDB(buffer.trim());
+            // wordDataArray.push(buffer.trim());
+        }
+        parsedDataArray.push(...wordDataArray);
+    }
+    return parsedDataArray;
+}
+
+function setWordDB(word, custom = false) {
+    const score = Math.floor(word.length / 2);
+    const jamoCount = countJamos(word);
+    const isSpecial = score >= 4;
+    if (!custom) {
+        WORD_DB[word] = {
+            sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
+            score: score ?? 1,
+            jamoCount: jamoCount ?? 1,
+            isSpecial: isSpecial
+        }
+    } else {
+        CUSTOM_WORD_DB[word] = {
+            sprite: UsePhaserGo ? null : ScriptApp.loadSpritesheet(`${word}.png`),
+            score: score ?? 1,
+            jamoCount: jamoCount ?? 1,
+            isSpecial: isSpecial
+        }
+    }
+}
+
+function isAdmin(player) {
+    return player.role >= 3000;
+}
 
 
 

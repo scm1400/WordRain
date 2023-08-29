@@ -390,7 +390,7 @@
 <div id="main">
     <div class="header">
         <div class="header-text">
-            <span>퀴즈 문제 업로드</span>
+            <span>단어 파일 업로드</span>
         </div>
         <svg onclick="backWidget()" class="button-close" width="20" height="20" viewBox="0 0 20 20" fill="none"
              xmlns="http://www.w3.org/2000/svg">
@@ -466,18 +466,16 @@
         <div class="content-bottom hidden">
             <div class="preview-area">
                 <div class="preview-area-header">
-                    <span>미리보기</span>
+                    <span>업로드된 단어<span id="word-count"></span></span>
                 </div>
                 <div class="table-wrapper scrollable">
                     <table class="preview-table">
                         <colgroup>
-                            <col style="width: 66%;">
-                            <col style="width: 33%;">
+                            <col style="width: 100%;">
                         </colgroup>
                         <thead>
                         <tr>
-                            <th>문제</th>
-                            <th>정답번호</th>
+                            <th>단어</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -504,40 +502,6 @@
     let _isRequesting = false;
 
     let _localizeContainer = {
-        sideapps_quizroom_title_main: "sideapps_quizroom_title_main",
-        sideapps_quizroom_subtitle_main: "sideapps_quizroom_subtitle_main",
-        sideapps_quizroom_desc: "sideapps_quizroom_desc",
-        sideapps_quizroom_button_guide: "sideapps_quizroom_button_guide",
-        sideapps_quizroom_button_open_upload: "sideapps_quizroom_button_open_upload",
-        sideapps_quizroom_button_setting: "sideapps_quizroom_button_setting",
-        sideapps_quizroom_button_download_history: "sideapps_quizroom_button_download_history",
-        sideapps_quizroom_button_reset_history: "sideapps_quizroom_button_reset_history",
-        sideapps_quizroom_manage_history: "sideapps_quizroom_manage_history",
-        sideapps_quizroom_toast_download: "sideapps_quizroom_toast_download",
-        sideapps_quizroom_toast_reset: "sideapps_quizroom_toast_reset",
-        sideapps_quizroom_alert_file_extension: "sideapps_quizroom_alert_file_extension",
-        sideapps_quizroom_message_file_extension: "sideapps_quizroom_message_file_extension",
-        sideapps_quizroom_alert_data_number: "sideapps_quizroom_alert_data_number",
-        sideapps_quizroom_data_columns: "sideapps_quizroom_data_columns",
-        sideapps_quizroom_alert_data_columns: "sideapps_quizroom_alert_data_columns",
-        sideapps_quizroom_alert_data_invalid: "sideapps_quizroom_alert_data_invalid",
-        sideapps_quizroom_title_upload: "sideapps_quizroom_title_upload",
-        sideapps_quizroom_subtitle_guide: "sideapps_quizroom_subtitle_guide",
-        sideapps_quizroom_desc_guide: "sideapps_quizroom_desc_guide",
-        sideapps_quizroom_link_guide: "sideapps_quizroom_link_guide",
-        sideapps_quizroom_button_download_sample: "sideapps_quizroom_button_download_sample",
-        sideapps_quizroom_subtitle_upload: "sideapps_quizroom_subtitle_upload",
-        sideapps_quizroom_desc_upload: "sideapps_quizroom_desc_upload",
-        sideapps_quizroom_button_add_file: "sideapps_quizroom_button_add_file",
-        sideapps_quizroom_subtitle_preview: "sideapps_quizroom_subtitle_preview",
-        sideapps_quizroom_preview_colum_1: "sideapps_quizroom_preview_colum_1",
-        sideapps_quizroom_preview_colum_2: "sideapps_quizroom_preview_colum_2",
-        sideapps_quizroom_button_apply: "sideapps_quizroom_button_apply",
-        sieapps_guestbook_button_reset_history: "sieapps_guestbook_button_reset_history",
-        sideapps_quizroom_reset_alert: "sideapps_quizroom_reset_alert",
-        sideapps_qna_widget_button_reset: "sideapps_qna_widget_button_reset",
-        sideapps_btn_cancel: "sideapps_btn_cancel",
-        sideapps_qna_widget_button_download: "sideapps_qna_widget_button_download"
     }
 
     window.addEventListener("message", (e) => {
@@ -546,7 +510,7 @@
             if (e.data.quizData && Array.isArray(e.data.quizData)) {
                 _localizeContainer = e.data.localizeContainer;
                 localize();
-                _quizData = e.data.quizData;
+                _wordData = e.data.quizData;
                 if (e.data.fileName) {
                     $uploadInfo.classList.add("active");
                     $uploadInfo.querySelector(".warn").classList.add("hidden");
@@ -651,7 +615,58 @@
         return fileExtension === 'csv' || fileExtension === 'txt';
     }
 
-    let _quizData;
+    let _wordData;
+
+    function renderTable() {
+        document.querySelector("#main > div.content > div.content-bottom.hidden")?.classList.remove("hidden");
+        let tableBody = document.getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+        document.getElementById("word-count").innerText = ` - ${_wordData.length} 단어 등록됨`
+        _wordData.forEach((data) => {
+            let tr = document.createElement('tr');
+            let problemColumn = document.createElement('td');
+            problemColumn.textContent = data;
+            tr.appendChild(problemColumn);
+            tableBody.appendChild(tr);
+        })
+        fitTheSize($main);
+    }
+
+    function clearFileInput() {
+        const fileInput = document.getElementById('csvFile');
+        fileInput.value = '';
+        document.querySelector("#main > div.footer > div").classList.add("disabled");
+        // $uploadInfo.classList.remove("active");
+        // document.getElementById("placeholder").classList.remove("hidden");
+        // document.getElementById("filename").innerText = "";
+        // document.getElementById("file-hidden-area").classList.add("hidden");
+        _isFileUploaded = false;
+    }
+
+    function opendGuide() {
+        let url = "https://zep.us/";
+        window.parent.postMessage({
+            type: 'ScriptAction:OPEN_WINDOW',
+            link: url,
+            zepSystem: true
+        }, '*');
+    }
+
+    function localize() {
+        // document.querySelector("#main > div.header > div > span").innerText = _localizeContainer.sideapps_quizroom_title_upload;
+        // document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_guide;
+        // document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > a > span:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_link_guide;
+        // document.querySelector("#main > div.content > div.content-top > div.guide-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_guide;
+        // document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_upload;
+        // document.querySelector("#main > div.content > div.content-top > div.upload-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_upload;
+        // document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > div.warn > span").innerText = _localizeContainer.sideapps_quizroom_message_file_extension;
+        // document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > label > span").innerText = _localizeContainer.sideapps_quizroom_button_add_file;
+        // document.querySelector("#main > div.content > div.content-bottom > div > div.preview-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_preview;
+        // document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(1)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_1;
+        // document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_2;
+        // document.querySelector("#main > div.footer > div > span").innerText = _localizeContainer.sideapps_quizroom_button_apply;
+        // document.querySelector("#main > div.content > div.content-top > div.guide-area > div.button-sample > span").innerText = _localizeContainer.sideapps_quizroom_button_download_sample;
+    }
 
     function validateCsv(csvContent) {
         window.parent.postMessage({
@@ -659,18 +674,10 @@
             csvContent: csvContent
         }, '*');
         let isValid = true;
-        _quizData = [];
-        let invalidColumnCountRows = [];
-        let invalidDataRows = [];
+        _wordData = [];
         let lines = csvContent.trim().split(/\r?\n/);
-        let maxLinesToCheck = 10;
-        if (lines.length < maxLinesToCheck) {
-            // console.log(`문제 데이터는 최소 ((number))개를 업로드해야 합니다.`.replace("((number))", maxLinesToCheck));
-            isValid = false;
-            return {isValid};
-        }
 
-        for (let index = 0; index < Math.min(lines.length, maxLinesToCheck); index++) {
+        for (let index = 0; index < lines.length; index++) {
             let line = lines[index];
             let quizDataArray = [];
             let cursor = 0;
@@ -702,81 +709,10 @@
             }
 
             if (buffer) quizDataArray.push(buffer.trim());
-
-            // 2번째 열이 숫자인지 확인
-            if (isNaN(quizDataArray[1]) || quizDataArray[1].trim() === "") {
-                invalidDataRows.push(index + 1);
-                isValid = false;
-            }
-
-            if (quizDataArray.length < 6) {
-                invalidColumnCountRows.push(index + 1);
-                isValid = false;
-            }
-            _quizData.push(quizDataArray);
+            
+            _wordData.push(...quizDataArray);
         }
-        // if (invalidDataRows.length > 0) {
-        //     let str = invalidDataRows.toString();
-        //     console.log(`((number))번째 줄의 2번째 열은 숫자 데이터가 입력되어야 합니다.`.replace("((number))", str));
-        // }
-        // if (invalidColumnCountRows.length > 0) {
-        //     let str = invalidColumnCountRows.toString();
-        //     console.log(`((number))번째 줄의 두 번째 열은 숫자로 된 정답번호가 입력되어야 합니다.\n[문제, 답, 객관식1, 객관식2, 객관식3, 객관식4]`.replace("((number))", str));
-        // }
         return {isValid};
-    }
-
-    function renderTable() {
-        document.querySelector("#main > div.content > div.content-bottom.hidden")?.classList.remove("hidden");
-        let tableBody = document.getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = '';
-        _quizData.forEach((data) => {
-            let tr = document.createElement('tr');
-            let problemColumn = document.createElement('td');
-            problemColumn.textContent = data[0];
-            let answerColumn = document.createElement('td');
-            answerColumn.textContent = data[1];
-            tr.appendChild(problemColumn);
-            tr.appendChild(answerColumn);
-            tableBody.appendChild(tr);
-        })
-        fitTheSize($main);
-    }
-
-    function clearFileInput() {
-        const fileInput = document.getElementById('csvFile');
-        fileInput.value = '';
-        document.querySelector("#main > div.footer > div").classList.add("disabled");
-        // $uploadInfo.classList.remove("active");
-        // document.getElementById("placeholder").classList.remove("hidden");
-        // document.getElementById("filename").innerText = "";
-        // document.getElementById("file-hidden-area").classList.add("hidden");
-        _isFileUploaded = false;
-    }
-
-    function opendGuide() {
-        let url = "https://zep.us/";
-        window.parent.postMessage({
-            type: 'ScriptAction:OPEN_WINDOW',
-            link: url,
-            zepSystem: true
-        }, '*');
-    }
-
-    function localize() {
-        document.querySelector("#main > div.header > div > span").innerText = _localizeContainer.sideapps_quizroom_title_upload;
-        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_guide;
-        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > a > span:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_link_guide;
-        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_guide;
-        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_upload;
-        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_upload;
-        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > div.warn > span").innerText = _localizeContainer.sideapps_quizroom_message_file_extension;
-        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > label > span").innerText = _localizeContainer.sideapps_quizroom_button_add_file;
-        document.querySelector("#main > div.content > div.content-bottom > div > div.preview-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_preview;
-        document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(1)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_1;
-        document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_2;
-        document.querySelector("#main > div.footer > div > span").innerText = _localizeContainer.sideapps_quizroom_button_apply;
-        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.button-sample > span").innerText = _localizeContainer.sideapps_quizroom_button_download_sample;
     }
 </script>
 </body>
