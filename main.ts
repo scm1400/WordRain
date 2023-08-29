@@ -28,8 +28,8 @@ const EFFECT_SPECIAL = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5],
     }, 6),
-    offsetX: -71,
-    offsetY: -123 + 32
+    offsetX: -55,
+    offsetY: -55
 }
 
 const EFFECT_COIN = {
@@ -37,8 +37,8 @@ const EFFECT_COIN = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5, 6],
     }, 7),
-    offsetX: -36,
-    offsetY: -69 + 32
+    offsetX: 0,
+    offsetY: 10
 }
 
 const EFFECT_RAINBOW_COIN = {
@@ -46,8 +46,8 @@ const EFFECT_RAINBOW_COIN = {
         //@ts-ignore
         play: [0, 1, 2, 3, 4, 5, 6],
     }, 7),
-    offsetX: -64,
-    offsetY: -123 + 32
+    offsetX: -48,
+    offsetY: -45
 }
 
 const CSV_COLUM_INFO = {
@@ -276,7 +276,7 @@ class GameEndState implements GameState {
 }
 
 const GAME_TIME = 70;
-const GAME_WAITING_TIME = 60;
+const GAME_WAITING_TIME = 60 * 5;
 const GAME_END_WAITING_TIME = 10;
 
 class Game {
@@ -490,7 +490,7 @@ class WordObject {
     public playerId: string;
     public lucky: boolean;
 
-    constructor(x: number, word: string, lucky =  false) {
+    constructor(x: number, word: string, lucky = false) {
         const wordInfo: WORD_INFO = WORD_DB[word] || SPECIAL_WORD_DB[word];
         if (!wordInfo) return;
 
@@ -503,7 +503,7 @@ class WordObject {
         this.isSpecial = wordInfo.isSpecial;
         this.y = 0;
         this.x = x * TILE_SIZE;
-        this.lucky =  lucky;
+        this.lucky = lucky;
 
         let moveSpeedValue = 30;
 
@@ -531,11 +531,11 @@ class WordObject {
                             },
                             resolution: 2,
                         },
-                        origin: [0.5, 1]
                     }
                 });
+                //@ts-ignore
+                // player.callPhaserFunc(key, 'setOrigin', [0.5, 0.5]);
             }
-            // player.callPhaserFunc(key, 'setDepth', [10]);
         } else {
             const sprite = wordInfo.sprite;
             ScriptMap.putObjectWithKey(x, 0, sprite, {
@@ -600,8 +600,8 @@ class WordObject {
 
             ScriptMap.putObjectWithKey(x, y, effectSprite, {
                 key: mainAnimationKey,
-                offsetX: 0,
-                offsetY: 0
+                offsetX,
+                offsetY: offsetY + (this.y - y * 32)
             })
             ScriptMap.playObjectAnimationWithKey(mainAnimationKey, "play", 0);
             ScriptApp.runLater(() => {

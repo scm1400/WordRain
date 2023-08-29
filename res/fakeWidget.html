@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Document</title>
+</head>
+
+<body>
+<span style="position: absolute; width: 100%">
+		<span style="
+					height: 75px;
+					width: 15px;
+				"></span>
+	</span>
+<script>
+    window.addEventListener("message", (e) => {
+        if (e.data.type === "exportToCsv") {
+            fnExcelReport(e.data.csvData, e.data.header, e.data.fileName, e.data.extension);
+        }
+    })
+
+    function fnExcelReport(data, header = null, fileName, extension = 'csv') {
+        let csvContents = "date, hashID, name, score, playTime";
+        if (header) {
+            csvContents = header;
+        }
+        csvContents += `\n`;
+
+        for (let i in data) {
+            array = data[i];
+            for (let index in array) {
+                let value = array[index];
+
+                // 데이터에 쉼표나 큰따옴표가 포함되어 있을 경우, 큰따옴표로 감싸고
+                // 기존에 큰따옴표가 있을 경우 두 번 사용하여 escape합니다.
+                if (typeof value === 'string' && (value.includes(",") || value.includes("\""))) {
+                    value = `"${value.replace(/"/g, '""')}"`;
+                }
+
+                if (index == 0) {
+                    csvContents += `${value}`;
+                } else {
+                    csvContents += `,${value}`;
+                }
+            }
+            csvContents += `\n`;
+        }
+
+        // download .csv file
+        let blob;
+        if (extension === 'txt') {
+            fileName = fileName.replace(".csv",".txt");
+            blob = new Blob(["\ufeff" + csvContents], {
+                type: "text/plain;charset=utf-8;",
+            });
+        } else {
+            blob = new Blob(["\ufeff" + csvContents], {
+                type: "text/csv;charset=utf-8;",
+            });
+        }
+
+        var url = URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+            
+        a.setAttribute("download", fileName);
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+            document.body.removeChild(a);
+        }, 0);
+    }
+</script>
+</body>
+
+</html>

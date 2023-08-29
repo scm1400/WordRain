@@ -1,0 +1,783 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css"
+          href="https://d3qhd4hfu1j9v4.cloudfront.net/static/zep-script/css/typography.css">
+    <link rel="stylesheet" type="text/css" href="https://d3qhd4hfu1j9v4.cloudfront.net/static/zep-script/css/color.css">
+    <style>
+        * {
+            user-select: none;
+        }
+
+        #main {
+            display: flex;
+            width: 400px;
+            flex-direction: column;
+            align-items: flex-end;
+            border-radius: 8px;
+            box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.25);
+            background: white;
+        }
+
+        .header {
+            display: flex;
+            height: 48px;
+            padding: 14px 16px;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+            align-self: stretch;
+        }
+
+        .header-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-grow: 1;
+        }
+
+        .header-text > label,
+        .header-text > span {
+            font: var(--body1-sb);
+            line-height: 100%;
+        }
+
+        .content {
+            display: flex;
+            padding: 0px 20px 4px 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            align-self: stretch;
+            width: 100%;
+        }
+
+        .guide-area {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            align-self: stretch;
+        }
+
+        .content-top {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 24px;
+            align-self: stretch;
+            width: 100%;
+        }
+
+        .content-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            align-self: stretch;
+            width: 100%;
+        }
+
+        .guide-area-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            align-self: stretch;
+            height: 25px;
+            width: 100%;
+        }
+
+        .preview-area-header > span,
+        .upload-area-header > span,
+        .guide-area-header > span {
+            font: var(--body1-b);
+            line-height: 100%;
+            flex-grow: 1;
+        }
+
+        .guide-area-header > a {
+            cursor: pointer;
+            display: flex;
+            padding: 0px 8px;
+            justify-content: center;
+            align-items: center;
+            gap: 2px;
+            align-self: stretch;
+            height: 100%;
+        }
+
+        .guide-area-header > a > span {
+            font: var(--caption1-sb);
+            line-height: 100%;
+            color: var(--primary-default);
+            text-align: center;
+        }
+
+        .upload-area > .desc,
+        .guide-area > .desc {
+            font: var(--caption1-r);
+        }
+
+        .button-sample {
+            cursor: pointer;
+            display: flex;
+            padding: 0px 10px;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            align-self: stretch;
+            border-radius: 4px;
+            height: 30px;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
+            background: var(--gray-100);
+            margin: 8px 0;
+            width: max-content;
+        }
+
+        .button-sample > span {
+            font: var(--caption1-sb);
+            line-height: 100%;
+            color: var(--gray-600);
+        }
+
+        .button-sample:hover {
+            background: var(--gray-200);
+        }
+
+        .upload-area {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            align-self: stretch;
+        }
+
+        .upload-info {
+            width: 100%;
+            display: flex;
+            padding: 10px 0px;
+            align-items: center;
+            gap: 8px;
+            align-self: stretch;
+            border-radius: 8px;
+        }
+
+
+        .upload-info.active {
+            padding: 10px;
+            background: var(--gray-50, #F8F9FC);
+        }
+
+        .upload-info > .file-name {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            align-self: stretch;
+            flex-grow: 1;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .file-name > svg {
+            flex-shrink: 0;
+        }
+
+        .file-name > span {
+            font: var(--caption1-sb);
+            line-height: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .button-upload {
+            flex-shrink: 0;
+            cursor: pointer;
+            display: flex;
+            height: 26px;
+            justify-content: center;
+            align-items: center;
+            border-radius: 4px;
+            padding: 0px 8px;
+            gap: 2px;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
+            background: var(--primary-bg, #F3F2FF);
+        }
+
+        .button-upload > label,
+        .button-upload > span {
+            font: var(--caption1-sb);
+            line-height: 100%;
+            color: var(--primary-default);
+        }
+
+        .button-upload:hover {
+            background: #E9E8FF;
+        }
+
+        .preview-area {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            align-self: stretch;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            max-height: 168px;
+            overflow-y: scroll; /* Vertical scroll */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--gray-100, #F3F5F9);
+        }
+
+        /*이중선 제거*/
+
+
+        thead {
+            background: var(--gray-100, #F3F5F9);
+            font: var(--caption1-sb);
+            text-align: left;
+        }
+
+        thead th {
+            padding: 8px;
+        }
+
+        thead > tr > th:first-child {
+            border-right: 1px solid var(--gray-200);
+        }
+
+        tbody {
+            font: var(--caption1-r);
+        }
+
+        tbody > tr > td {
+            user-select: text;
+        }
+
+        tbody td {
+            padding: 8px 6px;
+            text-align: left;
+            word-break: break-all;
+        }
+
+        tr:first-child {
+            width: 33%
+        }
+
+        tbody > tr > td:first-child {
+            border-right: 1px solid var(--gray-200, #E9EAF0);
+            border-bottom: 1px solid var(--gray-200, #E9EAF0);
+        }
+
+        tbody > tr > td:nth-child(2) {
+            border-bottom: 1px solid var(--gray-200, #E9EAF0);
+        }
+
+        .footer {
+            display: flex;
+            padding: 14px 20px 18px 20px;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 10px;
+            align-self: stretch;
+        }
+
+        .button-apply {
+            cursor: pointer;
+            display: flex;
+            height: 36px;
+            justify-content: center;
+            align-items: center;
+            flex: 1 0 0;
+            border-radius: 6px;
+            background: var(--primary-default, #6758FF);
+        }
+
+        .button-apply.disabled {
+            cursor: default;
+            pointer-events: none;
+            background: var(--primary-disable, #D9D6FF);
+        }
+
+        .button-apply.disabled > span {
+            opacity: 0.7;
+        }
+
+        .button-apply:not(.disabled):hover {
+            background: var(--primary-default-hover);
+        }
+
+        .button-apply > span {
+            font: var(--body1-sb);
+            line-height: 100%;
+            color: white;
+        }
+
+        .button-back,
+        .button-close {
+            cursor: pointer;
+        }
+
+        .padding-1 {
+            width: 1px;
+            height: 100%;
+        }
+
+        .padding-2 {
+            width: 2px;
+            height: 100%;
+        }
+
+        .warn {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-grow: 1;
+        }
+
+        .warn > span {
+            font: var(--caption1-sb);
+            color: #ff5353;
+            line-height: 100%;
+        }
+
+        .upload-info.active > .warn + .file-name {
+            display: none !important;
+        }
+
+        .upload-info.active > .warn.hidden + .file-name {
+            display: flex !important;
+        }
+
+        .upload-info > .file-name {
+            display: none !important;
+        }
+
+        .upload-info.active > .file-name {
+            display: flex !important;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+<div id="main">
+    <div class="header">
+        <div class="header-text">
+            <span>퀴즈 문제 업로드</span>
+        </div>
+        <svg onclick="backWidget()" class="button-close" width="20" height="20" viewBox="0 0 20 20" fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.41083 4.41083C4.73626 4.08539 5.2639 4.08539 5.58934 4.41083L10.0001 8.82157L14.4108 4.41083C14.7363 4.08539 15.2639 4.08539 15.5893 4.41083C15.9148 4.73626 15.9148 5.2639 15.5893 5.58934L11.1786 10.0001L15.5893 14.4108C15.9148 14.7363 15.9148 15.2639 15.5893 15.5893C15.2639 15.9148 14.7363 15.9148 14.4108 15.5893L10.0001 11.1786L5.58934 15.5893C5.2639 15.9148 4.73626 15.9148 4.41083 15.5893C4.08539 15.2639 4.08539 14.7363 4.41083 14.4108L8.82157 10.0001L4.41083 5.58934C4.08539 5.2639 4.08539 4.73626 4.41083 4.41083Z"
+                  fill="#27262E"/>
+        </svg>
+    </div>
+    <div class="content">
+        <div class="content-top">
+            <div class="guide-area">
+                <div class="guide-area-header">
+                    <span>파일 설정 가이드</span>
+                    <a onclick="opendGuide()">
+                        <svg width="12" height="13" viewBox="0 0 12 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7.25 3.25C6.97386 3.25 6.75 3.02614 6.75 2.75C6.75 2.47386 6.97386 2.25 7.25 2.25H9.75C9.88261 2.25 10.0098 2.30268 10.1036 2.39645C10.1973 2.49022 10.25 2.61739 10.25 2.75L10.25 5.25C10.25 5.52614 10.0261 5.75 9.75 5.75C9.47385 5.75 9.25 5.52614 9.25 5.25L9.25 3.95711L4.85355 8.35355C4.65829 8.54882 4.34171 8.54882 4.14645 8.35355C3.95118 8.15829 3.95118 7.84171 4.14645 7.64645L8.54289 3.25H7.25ZM1.5 4C1.5 3.44772 1.94772 3 2.5 3H5C5.27614 3 5.5 3.22386 5.5 3.5C5.5 3.77614 5.27614 4 5 4H2.5V10H8.5V7.5C8.5 7.22386 8.72386 7 9 7C9.27614 7 9.5 7.22386 9.5 7.5V10C9.5 10.5523 9.05228 11 8.5 11H2.5C1.94772 11 1.5 10.5523 1.5 10V4Z"
+                                  fill="#6758FF"/>
+                        </svg>
+                        <span>상세 가이드 보기</span>
+                        <span class="padding-1"></span>
+                    </a>
+                </div>
+                <div class="desc">메모장(텍스트 변환기)을 켜서 문제와 답을 기입한 후 파일을 저장해 주세요.</div>
+                <div class="button-sample" onclick="requestDownloadSample()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6.99992 1.75C7.32208 1.75 7.58325 2.01117 7.58325 2.33333V7.34171L8.92077 6.00419C9.14858 5.77638 9.51793 5.77638 9.74573 6.00419C9.97354 6.23199 9.97354 6.60134 9.74573 6.82915L7.4124 9.16248C7.18459 9.39029 6.81525 9.39029 6.58744 9.16248L4.25411 6.82915C4.0263 6.60134 4.0263 6.23199 4.25411 6.00419C4.48191 5.77638 4.85126 5.77638 5.07906 6.00419L6.41659 7.34171V2.33333C6.41659 2.01117 6.67775 1.75 6.99992 1.75ZM2.91659 8.75C3.23875 8.75 3.49992 9.01117 3.49992 9.33333V10.5H10.4999V9.33333C10.4999 9.01117 10.7611 8.75 11.0833 8.75C11.4054 8.75 11.6666 9.01117 11.6666 9.33333V10.5C11.6666 11.1443 11.1443 11.6667 10.4999 11.6667H3.49992C2.85559 11.6667 2.33325 11.1443 2.33325 10.5V9.33333C2.33325 9.01117 2.59442 8.75 2.91659 8.75Z"
+                              fill="#5E6066"/>
+                    </svg>
+                    <span>샘플 파일 다운로드</span>
+                    <div class="padding-2">
+
+                    </div>
+                </div>
+            </div>
+            <div class="upload-area">
+                <div class="upload-area-header">
+                    <span>문제 파일 업로드</span>
+                </div>
+                <div class="desc">
+                    문제가 기입된 txt 혹은 csv 파일을 업로드해 주세요. 정확한 형식이 아닐 경우, 문제 파일이 업로드 되지 않을 수 있습니다.
+                </div>
+                <div class="upload-info">
+                    <div class="warn hidden">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7.99999 8.66659C7.6318 8.66659 7.33332 8.36811 7.33332 7.99992V5.99992C7.33332 5.63173 7.6318 5.33325 7.99999 5.33325C8.36818 5.33325 8.66666 5.63173 8.66666 5.99992V7.99992C8.66666 8.36811 8.36818 8.66659 7.99999 8.66659Z"
+                                  fill="#FF5353"/>
+                            <path d="M6.99999 10.3333C6.99999 9.78097 7.44771 9.33325 7.99999 9.33325C8.55228 9.33325 8.99999 9.78097 8.99999 10.3333C8.99999 10.8855 8.55228 11.3333 7.99999 11.3333C7.44771 11.3333 6.99999 10.8855 6.99999 10.3333Z"
+                                  fill="#FF5353"/>
+                            <path d="M6.8201 1.47699C7.31998 0.527205 8.67999 0.527199 9.17988 1.47699L14.7423 12.0456C15.2096 12.9335 14.5658 13.9999 13.5624 13.9999H2.43757C1.43422 13.9999 0.79037 12.9335 1.25768 12.0456L6.8201 1.47699ZM13.5624 12.6666L7.99999 2.09798L2.43757 12.6666L13.5624 12.6666Z"
+                                  fill="#FF5353"/>
+                        </svg>
+                        <span>정확한 형식의 파일을 첨부해 주세요</span>
+                    </div>
+                    <div class="file-name">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2.66675 2.66659C2.66675 1.93021 3.2637 1.33325 4.00008 1.33325H9.33341C9.51023 1.33325 9.67979 1.40349 9.80482 1.52851L13.1382 4.86185C13.2632 4.98687 13.3334 5.15644 13.3334 5.33325V13.3333C13.3334 14.0696 12.7365 14.6666 12.0001 14.6666H4.00008C3.2637 14.6666 2.66675 14.0696 2.66675 13.3333V2.66659ZM11.7239 5.33325L9.33341 2.94273V5.33325H11.7239ZM8.00008 2.66659L4.00008 2.66659V13.3333H12.0001V6.66659H8.66675C8.29856 6.66659 8.00008 6.36811 8.00008 5.99992V2.66659ZM5.33341 8.66659C5.33341 8.2984 5.63189 7.99992 6.00008 7.99992H10.0001C10.3683 7.99992 10.6667 8.2984 10.6667 8.66659C10.6667 9.03478 10.3683 9.33325 10.0001 9.33325H6.00008C5.63189 9.33325 5.33341 9.03478 5.33341 8.66659ZM5.33341 11.3333C5.33341 10.9651 5.63189 10.6666 6.00008 10.6666H10.0001C10.3683 10.6666 10.6667 10.9651 10.6667 11.3333C10.6667 11.7014 10.3683 11.9999 10.0001 11.9999H6.00008C5.63189 11.9999 5.33341 11.7014 5.33341 11.3333Z"
+                                  fill="#27262E"/>
+                        </svg>
+                        <span>파일이름.CSV</span>
+                    </div>
+                    <label for="csvFile" class="button-upload" onclick="return checkUploadedFile();">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2.5 7.5C2.77614 7.5 3 7.72386 3 8V9H9V8C9 7.72386 9.22386 7.5 9.5 7.5C9.77614 7.5 10 7.72386 10 8V9C10 9.55229 9.55228 10 9 10H3C2.44772 10 2 9.55229 2 9V8C2 7.72386 2.22386 7.5 2.5 7.5Z"
+                                  fill="#6758FF"/>
+                            <path d="M6 8C6.27614 8 6.5 7.77614 6.5 7.5V3.20711L7.64645 4.35355C7.84171 4.54882 8.15829 4.54882 8.35355 4.35355C8.54882 4.15829 8.54882 3.84171 8.35355 3.64645L6.35355 1.64645C6.15829 1.45118 5.84171 1.45118 5.64645 1.64645L3.64645 3.64645C3.45118 3.84171 3.45118 4.15829 3.64645 4.35355C3.84171 4.54882 4.15829 4.54882 4.35355 4.35355L5.5 3.20711V7.5C5.5 7.77614 5.72386 8 6 8Z"
+                                  fill="#6758FF"/>
+                        </svg>
+                        <span>파일 추가</span>
+                        <input type="file" id="csvFile" accept=".csv, .txt" onchange="uploadAndValidateCsv()">
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="content-bottom hidden">
+            <div class="preview-area">
+                <div class="preview-area-header">
+                    <span>미리보기</span>
+                </div>
+                <div class="table-wrapper scrollable">
+                    <table class="preview-table">
+                        <colgroup>
+                            <col style="width: 66%;">
+                            <col style="width: 33%;">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>문제</th>
+                            <th>정답번호</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="button-apply disabled" onclick="requestApplyQuizData()">
+            <span>퀴즈 적용하기</span>
+        </div>
+    </div>
+</div>
+<script>
+    const $main = document.getElementById("main");
+    const $uploadInfo = document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info");
+
+    let _isFileUploaded = false;
+    let _fileContent = null;
+
+    let _isRequesting = false;
+
+    let _localizeContainer = {
+        sideapps_quizroom_title_main: "sideapps_quizroom_title_main",
+        sideapps_quizroom_subtitle_main: "sideapps_quizroom_subtitle_main",
+        sideapps_quizroom_desc: "sideapps_quizroom_desc",
+        sideapps_quizroom_button_guide: "sideapps_quizroom_button_guide",
+        sideapps_quizroom_button_open_upload: "sideapps_quizroom_button_open_upload",
+        sideapps_quizroom_button_setting: "sideapps_quizroom_button_setting",
+        sideapps_quizroom_button_download_history: "sideapps_quizroom_button_download_history",
+        sideapps_quizroom_button_reset_history: "sideapps_quizroom_button_reset_history",
+        sideapps_quizroom_manage_history: "sideapps_quizroom_manage_history",
+        sideapps_quizroom_toast_download: "sideapps_quizroom_toast_download",
+        sideapps_quizroom_toast_reset: "sideapps_quizroom_toast_reset",
+        sideapps_quizroom_alert_file_extension: "sideapps_quizroom_alert_file_extension",
+        sideapps_quizroom_message_file_extension: "sideapps_quizroom_message_file_extension",
+        sideapps_quizroom_alert_data_number: "sideapps_quizroom_alert_data_number",
+        sideapps_quizroom_data_columns: "sideapps_quizroom_data_columns",
+        sideapps_quizroom_alert_data_columns: "sideapps_quizroom_alert_data_columns",
+        sideapps_quizroom_alert_data_invalid: "sideapps_quizroom_alert_data_invalid",
+        sideapps_quizroom_title_upload: "sideapps_quizroom_title_upload",
+        sideapps_quizroom_subtitle_guide: "sideapps_quizroom_subtitle_guide",
+        sideapps_quizroom_desc_guide: "sideapps_quizroom_desc_guide",
+        sideapps_quizroom_link_guide: "sideapps_quizroom_link_guide",
+        sideapps_quizroom_button_download_sample: "sideapps_quizroom_button_download_sample",
+        sideapps_quizroom_subtitle_upload: "sideapps_quizroom_subtitle_upload",
+        sideapps_quizroom_desc_upload: "sideapps_quizroom_desc_upload",
+        sideapps_quizroom_button_add_file: "sideapps_quizroom_button_add_file",
+        sideapps_quizroom_subtitle_preview: "sideapps_quizroom_subtitle_preview",
+        sideapps_quizroom_preview_colum_1: "sideapps_quizroom_preview_colum_1",
+        sideapps_quizroom_preview_colum_2: "sideapps_quizroom_preview_colum_2",
+        sideapps_quizroom_button_apply: "sideapps_quizroom_button_apply",
+        sieapps_guestbook_button_reset_history: "sieapps_guestbook_button_reset_history",
+        sideapps_quizroom_reset_alert: "sideapps_quizroom_reset_alert",
+        sideapps_qna_widget_button_reset: "sideapps_qna_widget_button_reset",
+        sideapps_btn_cancel: "sideapps_btn_cancel",
+        sideapps_qna_widget_button_download: "sideapps_qna_widget_button_download"
+    }
+
+    window.addEventListener("message", (e) => {
+        const type = e.data.type;
+        if (type === "init") {
+            if (e.data.quizData && Array.isArray(e.data.quizData)) {
+                _localizeContainer = e.data.localizeContainer;
+                localize();
+                _quizData = e.data.quizData;
+                if (e.data.fileName) {
+                    $uploadInfo.classList.add("active");
+                    $uploadInfo.querySelector(".warn").classList.add("hidden");
+                    $uploadInfo.querySelector(".file-name > span").innerText = e.data.fileName;
+                }
+                renderTable();
+            }
+
+            fitTheSize($main);
+        } else if (type === "responseApplyQuizData") {
+            _isRequesting = false;
+            document.querySelector("#main > div.footer > div").classList.add("disabled");
+        }
+    })
+
+    function fitTheSize(el) {
+        const width = el.offsetWidth;
+        const height = el.offsetHeight;
+        window.parent.postMessage({
+            type: "WidgetRearrange",
+            anchor: "middle",
+            width: `${width + 20}px`,
+            height: `${height + 20}px`
+        }, "*");
+    }
+
+    function backWidget() {
+        window.parent.postMessage({
+            type: "back",
+        }, "*");
+    }
+
+
+    function closeWidget() {
+        window.parent.postMessage({
+            type: "close",
+        }, "*");
+    }
+
+    function requestApplyQuizData() {
+        if (!_isRequesting) {
+            window.parent.postMessage({
+                type: "requestApplyQuizData",
+            }, "*");
+        }
+    }
+
+    function requestDownloadSample() {
+        window.parent.postMessage({
+            type: "requestDownloadSample",
+        }, "*");
+    }
+
+    function checkUploadedFile() {
+        if (_isFileUploaded) {
+            clearFileInput();
+            return false;
+        }
+        return true;
+    }
+
+    function uploadAndValidateCsv() {
+        const fileInput = document.getElementById('csvFile');
+        const csvFile = fileInput.files[0];
+
+        // csv 확장자를 검사
+        if (!isCSVFile(csvFile)) {
+            $uploadInfo.classList.add("active");
+            $uploadInfo.querySelector(".warn").classList.remove("hidden");
+            clearFileInput();
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsText(csvFile);
+        reader.onload = function (event) {
+            _fileContent = event.target.result;
+            // csv 데이터 형식을 검사
+            const validationResult = validateCsv(_fileContent);
+            if (validationResult.isValid) {
+                $uploadInfo.classList.add("active");
+                $uploadInfo.querySelector(".warn").classList.add("hidden");
+                $uploadInfo.querySelector(".file-name > span").innerText = `${csvFile.name} (${csvFile.size}bytes)`;
+                document.querySelector("#main > div.footer > div").classList.remove("disabled");
+                window.parent.postMessage({
+                    type: "uploadCsv",
+                    fileName: csvFile.name,
+                    csvContent: _fileContent
+                }, '*');
+                _isFileUploaded = true;
+                renderTable();
+            } else {
+                $uploadInfo.classList.add("active");
+                $uploadInfo.querySelector(".warn").classList.remove("hidden");
+                clearFileInput();
+            }
+        };
+    }
+
+    function isCSVFile(file) {
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        return fileExtension === 'csv' || fileExtension === 'txt';
+    }
+
+    let _quizData;
+
+    function validateCsv(csvContent) {
+        window.parent.postMessage({
+            type: "uploadCsv",
+            csvContent: csvContent
+        }, '*');
+        let isValid = true;
+        _quizData = [];
+        let invalidColumnCountRows = [];
+        let invalidDataRows = [];
+        let lines = csvContent.trim().split(/\r?\n/);
+        let maxLinesToCheck = 10;
+        if (lines.length < maxLinesToCheck) {
+            // console.log(`문제 데이터는 최소 ((number))개를 업로드해야 합니다.`.replace("((number))", maxLinesToCheck));
+            isValid = false;
+            return {isValid};
+        }
+
+        for (let index = 0; index < Math.min(lines.length, maxLinesToCheck); index++) {
+            let line = lines[index];
+            let quizDataArray = [];
+            let cursor = 0;
+            let inQuote = false;
+            let buffer = '';
+
+            while (cursor < line.length) {
+                const currentChar = line[cursor];
+
+                if (currentChar === '"') {
+                    if (inQuote) {
+                        if (cursor + 1 < line.length && line[cursor + 1] === '"') {
+                            buffer += currentChar;
+                            cursor++;
+                        } else {
+                            inQuote = false;
+                        }
+                    } else {
+                        inQuote = true;
+                    }
+                } else if (currentChar === ',' && !inQuote) {
+                    quizDataArray.push(buffer.trim());
+                    buffer = '';
+                } else {
+                    buffer += currentChar;
+                }
+
+                cursor++;
+            }
+
+            if (buffer) quizDataArray.push(buffer.trim());
+
+            // 2번째 열이 숫자인지 확인
+            if (isNaN(quizDataArray[1]) || quizDataArray[1].trim() === "") {
+                invalidDataRows.push(index + 1);
+                isValid = false;
+            }
+
+            if (quizDataArray.length < 6) {
+                invalidColumnCountRows.push(index + 1);
+                isValid = false;
+            }
+            _quizData.push(quizDataArray);
+        }
+        // if (invalidDataRows.length > 0) {
+        //     let str = invalidDataRows.toString();
+        //     console.log(`((number))번째 줄의 2번째 열은 숫자 데이터가 입력되어야 합니다.`.replace("((number))", str));
+        // }
+        // if (invalidColumnCountRows.length > 0) {
+        //     let str = invalidColumnCountRows.toString();
+        //     console.log(`((number))번째 줄의 두 번째 열은 숫자로 된 정답번호가 입력되어야 합니다.\n[문제, 답, 객관식1, 객관식2, 객관식3, 객관식4]`.replace("((number))", str));
+        // }
+        return {isValid};
+    }
+
+    function renderTable() {
+        document.querySelector("#main > div.content > div.content-bottom.hidden")?.classList.remove("hidden");
+        let tableBody = document.getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+        _quizData.forEach((data) => {
+            let tr = document.createElement('tr');
+            let problemColumn = document.createElement('td');
+            problemColumn.textContent = data[0];
+            let answerColumn = document.createElement('td');
+            answerColumn.textContent = data[1];
+            tr.appendChild(problemColumn);
+            tr.appendChild(answerColumn);
+            tableBody.appendChild(tr);
+        })
+        fitTheSize($main);
+    }
+
+    function clearFileInput() {
+        const fileInput = document.getElementById('csvFile');
+        fileInput.value = '';
+        document.querySelector("#main > div.footer > div").classList.add("disabled");
+        // $uploadInfo.classList.remove("active");
+        // document.getElementById("placeholder").classList.remove("hidden");
+        // document.getElementById("filename").innerText = "";
+        // document.getElementById("file-hidden-area").classList.add("hidden");
+        _isFileUploaded = false;
+    }
+
+    function opendGuide() {
+        let url = "https://zep.us/";
+        window.parent.postMessage({
+            type: 'ScriptAction:OPEN_WINDOW',
+            link: url,
+            zepSystem: true
+        }, '*');
+    }
+
+    function localize() {
+        document.querySelector("#main > div.header > div > span").innerText = _localizeContainer.sideapps_quizroom_title_upload;
+        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_guide;
+        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.guide-area-header > a > span:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_link_guide;
+        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_guide;
+        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_upload;
+        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.desc").innerText = _localizeContainer.sideapps_quizroom_desc_upload;
+        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > div.warn > span").innerText = _localizeContainer.sideapps_quizroom_message_file_extension;
+        document.querySelector("#main > div.content > div.content-top > div.upload-area > div.upload-info > label > span").innerText = _localizeContainer.sideapps_quizroom_button_add_file;
+        document.querySelector("#main > div.content > div.content-bottom > div > div.preview-area-header > span").innerText = _localizeContainer.sideapps_quizroom_subtitle_preview;
+        document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(1)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_1;
+        document.querySelector("#main > div.content > div.content-bottom > div > div.table-wrapper.scrollable > table > thead > tr > th:nth-child(2)").innerText = _localizeContainer.sideapps_quizroom_preview_colum_2;
+        document.querySelector("#main > div.footer > div > span").innerText = _localizeContainer.sideapps_quizroom_button_apply;
+        document.querySelector("#main > div.content > div.content-top > div.guide-area > div.button-sample > span").innerText = _localizeContainer.sideapps_quizroom_button_download_sample;
+    }
+</script>
+</body>
+</html>
