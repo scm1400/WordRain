@@ -121,6 +121,7 @@ class ReadyState implements GameState {
     }
 
     update(game: Game, dt: number) {
+        if (game.isMiniGame) return;
         if (game._gameWaitingTime < 0) {
             game.start();
         } else {
@@ -267,6 +268,7 @@ class Game {
     _level: number;
     _levelTimer: number;
     _levelAddTimer: number;
+    isMiniGame: boolean;
     private _playerScoreMap: {
         [id: string]: PlayerScoreData
     };
@@ -298,6 +300,7 @@ class Game {
         this._sortedRankings = [];
         this._gameTime = GAME_TIME;
         this._gameWaitingTime = GAME_WAITING_TIME;
+        this.isMiniGame = false;
 
         this.clearAllObjects();
         if (!this.wordStacker) this.wordStacker = {};
@@ -596,11 +599,15 @@ class WordObject {
 let _game: Game;
 
 ScriptApp.onInit.Add(() => {
-    parseCSV(DEFAULT_WORD_CSV, false);
+    const array = parseCSV(DEFAULT_WORD_CSV, false);
+    array.forEach((word) => {
+        setWordDB(word);
+    })
+    _game = new Game();
 })
 
 ScriptApp.onStart.Add(() => {
-    _game = new Game();
+
 })
 
 ScriptApp.onJoinPlayer.Add(function (player) {
@@ -609,9 +616,19 @@ ScriptApp.onJoinPlayer.Add(function (player) {
         player.tag.startTime = Time.GetUtcTime();
         showRankWidget(player);
     }
+    if (!_game.isStarted() && ScriptApp.creatorID && player.id === ScriptApp.creatorID) {
+        _game.isMiniGame = true;
+        if (!isAdmin(player)) {
+            player.showCustomLabel("관리자만 실행할 수 있습니다.");
+            ScriptApp.forceDestroy();
+            return;
+        }
 
-    if (isAdmin(player) && !player.isMobile) {
-        showUploadWidget(player);
+        if (player.isMobile) {
+            _game.start();
+        } else {
+            showUploadWidget(player);
+        }
     }
 })
 
@@ -644,6 +661,9 @@ ScriptApp.onSay.Add((player, text) => {
         }
     } else if (text == "!clearObjects") {
         _game.clearAllObjects();
+    } else if (text == "!storage") {
+        //@ts-ignore
+        ScriptApp.sayToStaffs(App.storage)
     }
 })
 
@@ -733,81 +753,99 @@ function calculateTypingSpeed(startTime, count) {
 }
 
 function showUploadWidget(player) {
-    player.tag.uploadWidget = player.showWidget("upload.html", "middle", 0, 0);
-    player.tag.uploadWidget.sendMessage({
-        type: "init",
-        quizData: WORD_DB,
-        // fileName: _fileName,
-        localizeContainer: player.tag.localizeContainer
-    })
-    player.tag.uploadWidget.onMessage.Add(function (sender, data) {
-        const type = data.type;
-        switch (type) {
-            case "back": {
-                if (sender.tag.uploadWidget) {
-                    sender.tag.uploadWidget.destroy();
-                    sender.tag.uploadWidget = null;
+    ScriptApp.getStorage(() => {
+        ScriptApp.storage = ScriptApp.storage || "{}";
+        const appStorage = JSON.parse(ScriptApp.storage);
+        const dbData = appStorage.uploadedWordsDB || {};
+
+        dbData["default"] = Object.keys(WORD_DB);
+
+        player.tag.uploadWidget = player.showWidget("upload.html", "middle", 0, 0);
+        player.tag.uploadWidget.sendMessage({
+            type: "init",
+            quizData: dbData,
+            localizeContainer: player.tag.localizeContainer
+        });
+
+        player.tag.uploadWidget.onMessage.Add(function (sender, data) {
+            const type = data.type;
+            switch (type) {
+                case "back": {
+                    if (sender.tag.uploadWidget) {
+                        sender.tag.uploadWidget.destroy();
+                        sender.tag.uploadWidget = null;
+                    }
+                    if (sender.tag.widget) {
+                        sender.tag.widget.sendMessage({
+                            type: "show"
+                        })
+                    }
+                    break;
                 }
-                if (sender.tag.widget) {
-                    sender.tag.widget.sendMessage({
-                        type: "show"
+                case "close": {
+                    if (sender.tag.uploadWidget) {
+                        sender.tag.uploadWidget.destroy();
+                        sender.tag.uploadWidget = null;
+                    }
+                    if (sender.tag.widget) {
+                        sender.tag.widget.sendMessage({
+                            type: "miniMode"
+                        })
+                    }
+                    break;
+                }
+                case "uploadCsv": {
+                    if (!isAdmin(sender)) return;
+                    // _tempFileName = data.fileName;
+                    ScriptApp.getStorage(() => {
+                        const uploadedWordsArray = parseCSV(data.csvContent, true);
+                        const fileName = data.fileName;
+                        if (!fileName || uploadedWordsArray.length === 0) {
+                            sender.showAlert("🚫잘못된 파일을 업로드했습니다.")
+                            return;
+                        }
+
+                        const appStorage = JSON.parse(ScriptApp.storage);
+
+                        for (let key in WORD_DB) {
+                            delete WORD_DB[key];
+                        }
+                        uploadedWordsArray.forEach((word) => {
+                            setWordDB(word);
+                        })
+
+                        if (!appStorage.uploadedWordsDB) {
+                            appStorage.uploadedWordsDB = {};
+                        }
+                        appStorage.uploadedWordsDB[fileName] = uploadedWordsArray;
+                        ScriptApp.setStorage(JSON.stringify(appStorage));
                     })
+                    break;
                 }
-                break;
-            }
-            case "close": {
-                if (sender.tag.uploadWidget) {
-                    sender.tag.uploadWidget.destroy();
-                    sender.tag.uploadWidget = null;
+                case "requestStartGame": {
+                    if (!isAdmin(sender)) return;
+                    if (sender.tag.uploadWidget) {
+                        sender.tag.uploadWidget.destroy();
+                        sender.tag.uploadWidget = null;
+                    }
+                    // if (data.fileName === "default") {
+                        _game.start();
+                    // } else {
+                    //     ScriptApp.getStorage(() => {
+                    //         const appStorage = JSON.parse(ScriptApp.storage);
+                    //         if (appStorage.uploadedWordsDB && appStorage.uploadedWordsDB[data.fileName]) {
+                    //
+                    //         }
+                    //     })
+                    // }
+
+
+                    break;
                 }
-                if (sender.tag.widget) {
-                    sender.tag.widget.sendMessage({
-                        type: "miniMode"
-                    })
-                }
-                break;
             }
-            case "uploadCsv": {
-                if (!isAdmin(sender)) return;
-                // _tempFileName = data.fileName;
-                parseCSV(data.csvContent, true);
-                break;
-            }
-            case "requestApplyQuizData": {
-                if (!isAdmin(sender)) return;
-                if (sender.tag.uploadWidget) {
-                    sender.tag.uploadWidget.destroy();
-                    sender.tag.uploadWidget = null;
-                }
-                // if (_tempQuizData.length === 10) {
-                //     ScriptApp.getStorage(() => {
-                //         const appStorage = JSON.parse(ScriptApp.storage);
-                //         _quizData = _tempQuizData;
-                //         appStorage.quizData = _tempQuizData;
-                //         appStorage.fileName = _tempFileName;
-                //         ScriptApp.setStorage(JSON.stringify(appStorage));
-                //         // sender.tag.uploadWidget.sendMessage({type: "responseApplyQuizData"});
-                //         DeleteScoreImage();
-                //         for (const player of ScriptApp.players) {
-                //             if (!player) continue;
-                //             player.tag.point = 0;
-                //             player.tag.quizCount = 0;
-                //             player.tag.isComplete = false;
-                //             player.tag.solveData = {};
-                //
-                //             player.spawnAt(getRandomInt(1, 11), getRandomInt(126, 131))
-                //             player.hidden = false;
-                //             player.title = "";
-                //             player.sendUpdated();
-                //
-                //             putQuizObjects(player);
-                //         }
-                //     })
-                // }
-                break;
-            }
-        }
+        })
     })
+
 }
 
 function parseCSV(csvContent, custom = false) {
@@ -835,8 +873,7 @@ function parseCSV(csvContent, custom = false) {
                     inQuote = true;
                 }
             } else if (currentChar === ',' && !inQuote) {
-                setWordDB(buffer.trim());
-                // wordDataArray.push(buffer.trim());
+                wordDataArray.push(buffer.trim());
                 buffer = '';
             } else {
                 buffer += currentChar;
@@ -844,8 +881,7 @@ function parseCSV(csvContent, custom = false) {
             cursor++;
         }
         if (buffer) {
-            setWordDB(buffer.trim());
-            // wordDataArray.push(buffer.trim());
+            wordDataArray.push(buffer.trim());
         }
         parsedDataArray.push(...wordDataArray);
     }

@@ -390,7 +390,7 @@
 <div id="main">
     <div class="header">
         <div class="header-text">
-            <span>단어 파일 업로드</span>
+            <span>소나기 단어 목록 선택</span>
         </div>
         <svg onclick="backWidget()" class="button-close" width="20" height="20" viewBox="0 0 20 20" fill="none"
              xmlns="http://www.w3.org/2000/svg">
@@ -400,36 +400,14 @@
     </div>
     <div class="content">
         <div class="content-top">
-            <div class="guide-area">
-                <div class="guide-area-header">
-                    <span>파일 설정 가이드</span>
-                    <a onclick="opendGuide()">
-                        <svg width="12" height="13" viewBox="0 0 12 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M7.25 3.25C6.97386 3.25 6.75 3.02614 6.75 2.75C6.75 2.47386 6.97386 2.25 7.25 2.25H9.75C9.88261 2.25 10.0098 2.30268 10.1036 2.39645C10.1973 2.49022 10.25 2.61739 10.25 2.75L10.25 5.25C10.25 5.52614 10.0261 5.75 9.75 5.75C9.47385 5.75 9.25 5.52614 9.25 5.25L9.25 3.95711L4.85355 8.35355C4.65829 8.54882 4.34171 8.54882 4.14645 8.35355C3.95118 8.15829 3.95118 7.84171 4.14645 7.64645L8.54289 3.25H7.25ZM1.5 4C1.5 3.44772 1.94772 3 2.5 3H5C5.27614 3 5.5 3.22386 5.5 3.5C5.5 3.77614 5.27614 4 5 4H2.5V10H8.5V7.5C8.5 7.22386 8.72386 7 9 7C9.27614 7 9.5 7.22386 9.5 7.5V10C9.5 10.5523 9.05228 11 8.5 11H2.5C1.94772 11 1.5 10.5523 1.5 10V4Z"
-                                  fill="#6758FF"/>
-                        </svg>
-                        <span>상세 가이드 보기</span>
-                        <span class="padding-1"></span>
-                    </a>
-                </div>
-                <div class="desc">메모장(텍스트 변환기)을 켜서 문제와 답을 기입한 후 파일을 저장해 주세요.</div>
-                <div class="button-sample" onclick="requestDownloadSample()">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6.99992 1.75C7.32208 1.75 7.58325 2.01117 7.58325 2.33333V7.34171L8.92077 6.00419C9.14858 5.77638 9.51793 5.77638 9.74573 6.00419C9.97354 6.23199 9.97354 6.60134 9.74573 6.82915L7.4124 9.16248C7.18459 9.39029 6.81525 9.39029 6.58744 9.16248L4.25411 6.82915C4.0263 6.60134 4.0263 6.23199 4.25411 6.00419C4.48191 5.77638 4.85126 5.77638 5.07906 6.00419L6.41659 7.34171V2.33333C6.41659 2.01117 6.67775 1.75 6.99992 1.75ZM2.91659 8.75C3.23875 8.75 3.49992 9.01117 3.49992 9.33333V10.5H10.4999V9.33333C10.4999 9.01117 10.7611 8.75 11.0833 8.75C11.4054 8.75 11.6666 9.01117 11.6666 9.33333V10.5C11.6666 11.1443 11.1443 11.6667 10.4999 11.6667H3.49992C2.85559 11.6667 2.33325 11.1443 2.33325 10.5V9.33333C2.33325 9.01117 2.59442 8.75 2.91659 8.75Z"
-                              fill="#5E6066"/>
-                    </svg>
-                    <span>샘플 파일 다운로드</span>
-                    <div class="padding-2">
-
-                    </div>
-                </div>
-            </div>
             <div class="upload-area">
                 <div class="upload-area-header">
-                    <span>문제 파일 업로드</span>
+                    <span>소나기게임 단어 업로드</span>
                 </div>
                 <div class="desc">
-                    문제가 기입된 txt 혹은 csv 파일을 업로드해 주세요. 정확한 형식이 아닐 경우, 문제 파일이 업로드 되지 않을 수 있습니다.
+                    쉼표(,)로 구분된 단어를 포함한 txt나 csv 파일을 업로드할 수 있습니다.
+                    <br>
+                    단어에 쉼표(,)가 포함된 경우 해당 단어를 큰따옴표("")로 둘러싸야 합니다.
                 </div>
                 <div class="upload-info">
                     <div class="warn hidden">
@@ -487,8 +465,8 @@
         </div>
     </div>
     <div class="footer">
-        <div class="button-apply disabled" onclick="requestApplyQuizData()">
-            <span>퀴즈 적용하기</span>
+        <div class="button-apply disabled" onclick="startGame()">
+            <span>게임 시작</span>
         </div>
     </div>
 </div>
@@ -501,21 +479,21 @@
 
     let _isRequesting = false;
 
-    let _localizeContainer = {
-    }
+    let _localizeContainer = {}
 
     window.addEventListener("message", (e) => {
         const type = e.data.type;
         if (type === "init") {
-            if (e.data.quizData && Array.isArray(e.data.quizData)) {
-                _localizeContainer = e.data.localizeContainer;
-                localize();
-                _wordData = e.data.quizData;
-                if (e.data.fileName) {
-                    $uploadInfo.classList.add("active");
-                    $uploadInfo.querySelector(".warn").classList.add("hidden");
-                    $uploadInfo.querySelector(".file-name > span").innerText = e.data.fileName;
-                }
+            if (e.data.quizData) {
+                // _localizeContainer = e.data.localizeContainer;
+                // localize();
+                _wordDB = e.data.quizData;
+                _currentWordData = e.data.quizData["default"];
+                // if (e.data.fileName) {
+                //     $uploadInfo.classList.add("active");
+                //     $uploadInfo.querySelector(".warn").classList.add("hidden");
+                //     $uploadInfo.querySelector(".file-name > span").innerText = e.data.fileName;
+                // }
                 renderTable();
             }
 
@@ -550,10 +528,11 @@
         }, "*");
     }
 
-    function requestApplyQuizData() {
+    function startGame() {
         if (!_isRequesting) {
             window.parent.postMessage({
-                type: "requestApplyQuizData",
+                type: "requestStartGame",
+                fileName: _currentFileName
             }, "*");
         }
     }
@@ -591,13 +570,14 @@
             // csv 데이터 형식을 검사
             const validationResult = validateCsv(_fileContent);
             if (validationResult.isValid) {
+                _currentFileName = csvFile.name;
                 $uploadInfo.classList.add("active");
                 $uploadInfo.querySelector(".warn").classList.add("hidden");
-                $uploadInfo.querySelector(".file-name > span").innerText = `${csvFile.name} (${csvFile.size}bytes)`;
+                $uploadInfo.querySelector(".file-name > span").innerText = `${_currentFileName} (${csvFile.size}bytes)`;
                 document.querySelector("#main > div.footer > div").classList.remove("disabled");
                 window.parent.postMessage({
                     type: "uploadCsv",
-                    fileName: csvFile.name,
+                    fileName: _currentFileName,
                     csvContent: _fileContent
                 }, '*');
                 _isFileUploaded = true;
@@ -615,14 +595,16 @@
         return fileExtension === 'csv' || fileExtension === 'txt';
     }
 
-    let _wordData;
+    let _wordDB;
+    let _currentWordData;
+    let _currentFileName = "default";
 
     function renderTable() {
         document.querySelector("#main > div.content > div.content-bottom.hidden")?.classList.remove("hidden");
         let tableBody = document.getElementsByTagName('tbody')[0];
         tableBody.innerHTML = '';
-        document.getElementById("word-count").innerText = ` - ${_wordData.length} 단어 등록됨`
-        _wordData.forEach((data) => {
+        document.getElementById("word-count").innerText = ` - ${_currentWordData.length}개 단어`
+        _currentWordData.forEach((data) => {
             let tr = document.createElement('tr');
             let problemColumn = document.createElement('td');
             problemColumn.textContent = data;
@@ -669,12 +651,12 @@
     }
 
     function validateCsv(csvContent) {
-        window.parent.postMessage({
-            type: "uploadCsv",
-            csvContent: csvContent
-        }, '*');
+        // window.parent.postMessage({
+        //     type: "uploadCsv",
+        //     csvContent: csvContent
+        // }, '*');
         let isValid = true;
-        _wordData = [];
+        _currentWordData = [];
         let lines = csvContent.trim().split(/\r?\n/);
 
         for (let index = 0; index < lines.length; index++) {
@@ -709,8 +691,8 @@
             }
 
             if (buffer) quizDataArray.push(buffer.trim());
-            
-            _wordData.push(...quizDataArray);
+
+            _currentWordData.push(...quizDataArray);
         }
         return {isValid};
     }
