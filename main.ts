@@ -247,7 +247,11 @@ class GameEndState implements GameState {
                 }
             })
             showAppLabel(gameResultMessage, 8000);
-            game.init();
+            if (game.isMiniGame) {
+                ScriptApp.forceDestroy();
+            } else {
+                game.init();
+            }
         } else if (this.stateTime < 0) {
             game.setState(new ReadyState());
         }
@@ -285,6 +289,7 @@ class Game {
 
     constructor() {
         this.state = new ReadyState();
+        this.isMiniGame = false;
         this.init();
     }
 
@@ -300,7 +305,6 @@ class Game {
         this._sortedRankings = [];
         this._gameTime = GAME_TIME;
         this._gameWaitingTime = GAME_WAITING_TIME;
-        this.isMiniGame = false;
 
         this.clearAllObjects();
         if (!this.wordStacker) this.wordStacker = {};
@@ -664,6 +668,9 @@ ScriptApp.onSay.Add((player, text) => {
     } else if (text == "!storage") {
         //@ts-ignore
         ScriptApp.sayToStaffs(App.storage)
+    } else if (text == "!normal") {
+        player.showCenterLabel("노멀게임 모드가 적용되었습니다.")
+        _game.isMiniGame = false;
     }
 })
 
@@ -829,7 +836,7 @@ function showUploadWidget(player) {
                         sender.tag.uploadWidget = null;
                     }
                     // if (data.fileName === "default") {
-                        _game.start();
+                    _game.start();
                     // } else {
                     //     ScriptApp.getStorage(() => {
                     //         const appStorage = JSON.parse(ScriptApp.storage);
