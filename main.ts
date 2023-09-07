@@ -664,7 +664,7 @@ ScriptApp.onSay.Add((player, text) => {
 				player.playSound("rainbow.wav");
 			} else if (firstWordObject.isSpecial) {
 				_game._freeze = true;
-				_game._freezeTimer = 10;
+				_game._freezeTimer = 5;
 				player.playSound("boom.wav");
 			} else {
 				player.playSound("correct.mp3");
