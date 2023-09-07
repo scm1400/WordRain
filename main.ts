@@ -293,7 +293,7 @@ class Game {
 	_gameTime: number;
 
 	_sortedRankings: PlayerScoreData[];
-	_freeze: boolean = false; // 빨간 단어를 맞추면 모든 단어를 멈추게 할 변수
+	_freeze: boolean; // 빨간 단어를 맞추면 모든 단어를 멈추게 할 변수
 	_freezeTimer: number;
 
 	wordObjectCounter: number;
@@ -301,10 +301,12 @@ class Game {
 		[text: string]: WordObject[];
 	};
 
-	isMiniGame: boolean = false;
+	isMiniGame: boolean;
 
 	constructor() {
 		this.state = new ReadyState();
+		this.isMiniGame = false;
+		this._freeze = false;
 		this.init();
 	}
 
