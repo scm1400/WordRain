@@ -1,7 +1,6 @@
 /**
  * Copyright (c) 2022 ZEP Co., LTD
  */
-
 import "zep-script";
 import { ScriptDynamicResource, ScriptPlayer } from "zep-script";
 
@@ -249,7 +248,11 @@ class GameEndState implements GameState {
 
 	update(game: Game, dt: number) {
 		if (this.stateTime === GAME_END_WAITING_TIME) {
-			ScriptApp.playSound("victory.wav", false, true);
+			for (const player of ScriptApp.players) {
+				//@ts-ignore
+				player.playSound("victory.wav", false, true, "victory", 0.4);
+			}
+
 			let gameResultMessage: string = "[ ☔ 게임 결과 ]";
 			game._sortedRankings.forEach((playerScoreData, index) => {
 				if (index < 3) {
@@ -272,7 +275,7 @@ class GameEndState implements GameState {
 }
 
 const GAME_TIME = 70;
-const GAME_WAITING_TIME = 60 * 5;
+const GAME_WAITING_TIME = 60;
 const GAME_END_WAITING_TIME = 10;
 
 class Game {
@@ -519,7 +522,7 @@ class WordObject {
 						style: {
 							fontSize: "24px",
 							fontFamily: FONT_FAMILY,
-							fontWeight: "bold",
+							fontStyle: "bold",
 							color: this.lucky ? "#00FF00" : this.isSpecial ? "#D0312D" : "#FFFFFF",
 							strokeThickness: 4,
 							stroke: "#333333",
@@ -629,6 +632,8 @@ ScriptApp.onInit.Add(() => {
 ScriptApp.onStart.Add(() => {});
 
 ScriptApp.onJoinPlayer.Add(function (player) {
+	//@ts-ignore
+	player.playSound("bgm.mp3", true, true, "bgm", 0.6);
 	player.tag = {};
 	if (_game && _game.isStarted()) {
 		player.tag.startTime = Time.GetUtcTime();
@@ -661,13 +666,16 @@ ScriptApp.onSay.Add((player, text) => {
 			let firstWordObject = wordObjects[0];
 			incrementScore(player, firstWordObject);
 			if (firstWordObject.lucky) {
-				player.playSound("rainbow.wav");
+				//@ts-ignore
+				player.playSound("rainbow.wav", false, true, 0.7);
 			} else if (firstWordObject.isSpecial) {
 				_game._freeze = true;
-				_game._freezeTimer = 5;
-				player.playSound("boom.wav");
+				_game._freezeTimer = 3;
+				//@ts-ignore
+				player.playSound("boom.wav", false, true, 0.7);
 			} else {
-				player.playSound("correct.mp3");
+				//@ts-ignore
+				player.playSound("correct.mp3", false, true, 0.7);
 			}
 			firstWordObject.destroy();
 		}

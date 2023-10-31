@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\res\words_en.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
