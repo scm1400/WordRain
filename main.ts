@@ -855,7 +855,7 @@ function showAppLabel(str, time = 1500) {
     ScriptApp.showCustomLabel(message, 0xffffff, 0x000000, -250, 100, 1, time);
 }
 
-function showLabelTypeG(player, key, text, time = 4000, textColor = "#ffffff", bgColor = 0x27262e) {
+function showLabelTypeG(player, key, text, time = 4000, textColor = 0xffffff, bgColor = 0x27262e) {
     const isMobile = player.isMobile;
     const topGap = isMobile ? 10 : -2; // 모바일은 상단으로 부터 60px, pc는 48px이 되도록 설정한 값
     /**

@@ -9,11 +9,11 @@
   },
   "devDependencies": {
     "@babel/cli": "^7.23.0",
-    "@babel/core": "^7.23.2",
-    "@babel/preset-typescript": "^7.23.2",
-    "@types/node": "^20.8.10",
-    "eslint": "^8.52.0",
+    "@babel/core": "^7.23.3",
+    "@babel/preset-typescript": "^7.23.3",
+    "@types/node": "^20.9.2",
+    "eslint": "^8.54.0",
     "typescript": "^5.2.2",
-    "zep-script": "0.12.3"
+    "zep-script": "0.12.4"
   }
 }
