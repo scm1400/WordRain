@@ -30,7 +30,7 @@ const LocalizeContainer = {
     [Language.ko]: {
         wordrain_label_waiting: "((number))초 후 단어 소나기 게임이 시작됩니다.",
         wordrain_label_playing: "((number))초 후 단어 소나기가 멈춥니다..",
-        wordrain_text_result: "[ ☔ 게임 결과 ]",
+        wordrain_text_result: " 🏆 게임 결과 ",
         wordrain_text_rank: "((rank))등: ((name))(((score))점)",
         wordrain_wran_not_admin: "관리자만 게임을 실행할 수 있습니다.",
         wordrain_normal_mode: "노멀게임 모드가 적용되었습니다.",
@@ -216,7 +216,7 @@ class ReadyState implements GameState {
         if (game._gameWaitingTime < 0) {
             game.start();
         } else {
-            actionToAllPlayers(player => showLabelTypeG(player, "main", LocalizeContainer[player.language].wordrain_label_waiting.replace("((number))", String(Math.floor(game._gameWaitingTime)))));
+            actionToAllPlayers(player => showLabelTypeG(player, "main", "⏰ " + LocalizeContainer[player.language].wordrain_label_waiting.replace("((number))", String(Math.floor(game._gameWaitingTime)))));
         }
         game._gameWaitingTime -= dt;
     }
@@ -242,7 +242,7 @@ class PlayingState implements GameState {
         if (game._gameTime < 0) {
             game.setState(new GameEndState());
         } else {
-            actionToAllPlayers(player => showLabelTypeG(player, "main", LocalizeContainer[player.language].wordrain_label_playing.replace("((number))", String(Math.floor(game._gameTime)))));
+            actionToAllPlayers(player => showLabelTypeG(player, "main","☔ " + LocalizeContainer[player.language].wordrain_label_playing.replace("((number))", String(Math.floor(game._gameTime)))));
             game._gameTime -= dt;
             if (game._freeze) {
                 game._freezeTimer -= dt;
@@ -372,7 +372,7 @@ class GameEndState implements GameState {
 }
 
 const GAME_TIME = 70;
-const GAME_WAITING_TIME = 60;
+const GAME_WAITING_TIME = 20;
 const GAME_END_WAITING_TIME = 10;
 
 class Game {
@@ -730,21 +730,20 @@ ScriptApp.onStart.Add(() => {
 });
 
 ScriptApp.onJoinPlayer.Add(function (player) {
-    //@ts-ignore
-    player.playSound("bgm.mp3", true, true, "bgm", 0.6);
-    player.tag = {};
-    if (_game && _game.isStarted()) {
-        player.tag.startTime = Time.GetUtcTime();
-        showRankWidget(player);
-    }
-    if (!_game.isStarted() && ScriptApp.creatorID && player.id === ScriptApp.creatorID) {
-        _game.isMiniGame = true;
-        if (!isAdmin(player)) {
-            //@ts-ignore
-            showLabelTypeG(player, "main", LocalizeContainer[player.language].wordrain_wran_not_admin);
-            ScriptApp.forceDestroy();
-            return;
-        }
+	//@ts-ignore
+	player.playSound("bgm.mp3", true, true, "bgm", 0.6);
+	player.tag = {};
+	if (_game && _game.isStarted()) {
+		player.tag.startTime = Time.GetUtcTime();
+		showRankWidget(player);
+	}
+	if (!_game.isStarted() && ScriptApp.creatorID && player.id === ScriptApp.creatorID) {
+		_game.isMiniGame = true;
+		// if (!isAdmin(player)) {
+		// 	player.showCustomLabel("관리자만 실행할 수 있습니다.");
+		// 	ScriptApp.forceDestroy();
+		// 	return;
+		// }
 
         if (player.isMobile) {
             _game.start();
@@ -966,7 +965,7 @@ function showUploadWidget(player) {
                     break;
                 }
                 case "uploadCsv": {
-                    if (!isAdmin(sender)) return;
+                    // if (!isAdmin(sender)) return;
                     // _tempFileName = data.fileName;
                     ScriptApp.getStorage(() => {
                         const uploadedWordsArray = parseCSV(data.csvContent, true);
@@ -994,7 +993,7 @@ function showUploadWidget(player) {
                     break;
                 }
                 case "requestStartGame": {
-                    if (!isAdmin(sender)) return;
+                    // if (!isAdmin(sender)) return;
                     if (sender.tag.uploadWidget) {
                         sender.tag.uploadWidget.destroy();
                         sender.tag.uploadWidget = null;
